@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'add_item_page.dart';
+import 'add_item_page.dart' hide AppColors;
+import 'order-import-page.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
@@ -119,7 +120,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             height: 160,
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
             ),
@@ -131,7 +132,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             height: 100,
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.06),
+                color: AppColors.warning.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
             ),
@@ -143,7 +144,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             height: 120,
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
             ),
@@ -235,7 +236,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimary.withOpacity(0.06),
+              color: AppColors.textPrimary.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -289,7 +290,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: AppColors.textPrimary.withOpacity(0.06),
+                color: AppColors.textPrimary.withValues(alpha: 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -345,7 +346,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             trendUp: true,
             color: AppColors.warning,
             decoColor: AppColors.shimmerOrange,
-            iconBgColor: AppColors.warning.withOpacity(0.15),
+            iconBgColor: AppColors.warning.withValues(alpha: 0.15),
             iconColor: AppColors.warning,
             delayMs: 200,
           ),
@@ -358,7 +359,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             trendUp: false,
             color: AppColors.danger,
             decoColor: AppColors.shimmerRed,
-            iconBgColor: AppColors.danger.withOpacity(0.15),
+            iconBgColor: AppColors.danger.withValues(alpha: 0.15),
             iconColor: AppColors.danger,
             delayMs: 300,
           ),
@@ -371,7 +372,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             trendUp: false,
             color: AppColors.success,
             decoColor: AppColors.shimmerGreen,
-            iconBgColor: AppColors.success.withOpacity(0.15),
+            iconBgColor: AppColors.success.withValues(alpha: 0.15),
             iconColor: AppColors.success,
             delayMs: 400,
           ),
@@ -395,7 +396,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             label: '一键导入',
             startColor: AppColors.gradientGold,
             endColor: AppColors.primary,
-            onTap: () => ToastUtils.show(context, '打开一键导入订单'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OrderImportPage()),
+            ),
             delayMs: 50,
           ),
           QuickActionCard(
@@ -533,7 +536,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.35),
+                        color: AppColors.primary.withValues(alpha: 0.35),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

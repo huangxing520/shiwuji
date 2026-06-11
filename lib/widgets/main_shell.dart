@@ -13,46 +13,11 @@ class MainShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F3ED),
       body: navigationShell,
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
 
-  // Widget _buildBottomNav() {
-  //   final tabs = [
-  //     (icon: Icons.home_outlined, label: '首页',selectedIcon: Icons.home_outlined),
-  //     (icon: Icons.calendar_today_outlined, label: '物品',selectedIcon: Icons.inventory_2_outlined),
-  //     (icon: Icons.person_outlined, label: '收纳',selectedIcon:Icons.storage_outlined),
-  //     (icon: Icons.add_outlined, label: '我的',selectedIcon: Icons.person_outlined),
-  //   ];
-
-  //   return Container(
-  //     height: 80,
-  //     padding: const EdgeInsets.only(bottom: 8),
-  //     decoration: const BoxDecoration(
-  //       color: Color(0xFFFAF7F0),
-  //       border: Border(top: BorderSide(color: Color(0xFFE8E4DC), width: 1)),
-  //     ),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceAround,
-  //       children: List.generate(tabs.length, (index) {
-  //         final isActive = navigationShell.currentIndex == index;
-  //         return _BottomNavItem(
-  //           icon: isActive ? tabs[index].selectedIcon : tabs[index].icon,
-  //           label: tabs[index].label,
-  //           isActive: isActive,
-  //           onTap: () {
-  //             navigationShell.goBranch(
-  //               index,
-  //               initialLocation: index == navigationShell.currentIndex,
-  //             );
-  //           },
-  //         );
-  //       }),
-  //     ),
-  //   );
-  // }
-
-  Widget _buildBottomNavBar() {
+  Widget _buildBottomNavBar(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -72,7 +37,7 @@ class MainShell extends StatelessWidget {
             child: Center(
               child: GestureDetector(
                 onTap: () {
-                  navigationShell.goBranch(3, initialLocation: true);
+                  context.push('/add_item');
                 },
                 child: Container(
                   width: 52,

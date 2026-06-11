@@ -34,12 +34,17 @@ class BottomNavBar extends StatelessWidget {
           ),
           const SizedBox(width: 52),
           _buildNavItem(
-            Icons.bar_chart,
-            Icons.bar_chart_outlined,
-            '数据统计',
+            Icons.archive,
+            Icons.archive_outlined  ,
+            '收纳',
             TabType.stats,
           ),
-          _buildNavItem(Icons.person, Icons.person_outlined, '个人中心', TabType.me),
+          _buildNavItem(
+            Icons.person,
+            Icons.person_outlined,
+            '个人中心',
+            TabType.me,
+          ),
         ],
       ),
     );
@@ -54,6 +59,7 @@ class BottomNavBar extends StatelessWidget {
     final isActive = currentTab == tab;
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => onTabChanged(tab),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

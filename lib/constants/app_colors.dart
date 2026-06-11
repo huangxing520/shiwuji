@@ -56,7 +56,7 @@ class AppColors {
   static const accentLight = Color(0xFFFFE066);
 
   // ── 额外背景色 ──
-  static const accentLightBg = Color(0xFFFFF3CC);
+  static const accentLightBg = Color.fromARGB(255, 241, 198, 77);
   static const shimmerGold = Color(0xFFFFB800);
   static const shimmerOrange = Color(0xFFFF8C42);
   static const shimmerRed = Color(0xFFFF6B6B);
