@@ -1,13 +1,16 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/services/update_service.dart';
+import 'package:shi_wu_ji/widgets/toast_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// 检查状态
 enum _CheckState { idle, checking, upToDate, newVersion, error }
 
 /// 检查更新页面
 ///
-/// API 地址占位：[_checkUpdateApi]，后续替换为真实接口即可。
+/// 通过 [UpdateService] 调用后端接口获取最新版本信息。
 class CheckUpdatePage extends StatefulWidget {
   const CheckUpdatePage({super.key});
 
@@ -18,10 +21,8 @@ class CheckUpdatePage extends StatefulWidget {
 class _CheckUpdatePageState extends State<CheckUpdatePage>
     with SingleTickerProviderStateMixin {
   // ─── 常量 ───────────────────────────────────
-  static const String _currentVersion = '1.0.0';
-
-  /// TODO: 替换为真实的检查更新 API 地址
-  static const String _checkUpdateApi = 'https://api.example.com/check-update';
+  // 当前版本号：从 PackageInfo 读取，未加载前用占位符
+  String _currentVersion = '—';
 
   // ─── 状态 ───────────────────────────────────
   _CheckState _state = _CheckState.idle;
@@ -30,6 +31,10 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
   String _latestVersion = '';
   String _releaseNotes = '';
   String _downloadUrl = '';
+  String _htmlUrl = '';
+
+  // 错误信息
+  String _errorMessage = '';
 
   // 动画
   late AnimationController _loadingController;
@@ -41,6 +46,19 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
+    _loadVersion();
+  }
+
+  /// 从 PackageInfo 读取当前应用版本号
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() => _currentVersion = info.version);
+      }
+    } catch (_) {
+      // 读取失败保持占位符
+    }
   }
 
   @override
@@ -49,58 +67,152 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
     super.dispose();
   }
 
-  // ─── 检查更新逻辑（API 占位）─────────────────
+  // ─── 检查更新逻辑 ─────────────────────────
 
   Future<void> _checkUpdate() async {
     setState(() => _state = _CheckState.checking);
     _loadingController.repeat();
 
-    try {
-      // ──────────────────────────────────────────────
-      // TODO: 替换为真实 API 调用
-      //
-      // 示例：
-      // final response = await http.get(Uri.parse(_checkUpdateApi));
-      // final data = jsonDecode(response.body);
-      //
-      // 期望返回格式：
-      // {
-      //   "latest_version": "1.1.0",
-      //   "release_notes": "1. 新增XX功能\n2. 修复XX问题",
-      //   "download_url": "https://..."
-      // }
-      //
-      // 比对版本号后设置 _state：
-      // if (data['latest_version'] != _currentVersion) → _CheckState.newVersion
-      // else → _CheckState.upToDate
-      // ──────────────────────────────────────────────
+    final outcome = await UpdateService.instance.check(_currentVersion);
 
-      // 模拟网络请求延迟
-      await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    setState(() {
+      _loadingController.stop();
+      _loadingController.reset();
+      _state = _mapResult(outcome.result);
+      _errorMessage = outcome.errorMessage ?? '';
+      if (outcome.info != null) {
+        _latestVersion = outcome.info!.latestVersion;
+        _releaseNotes = outcome.info!.releaseNotes;
+        _downloadUrl = outcome.info!.downloadUrl;
+        _htmlUrl = outcome.info!.htmlUrl;
+      }
+    });
 
-      // 占位：模拟"已是最新版本"
-      // 实际使用时请替换为上方 TODO 中的真实逻辑
-      if (mounted) {
-        setState(() {
-          _state = _CheckState.upToDate;
-          _loadingController.stop();
-          _loadingController.reset();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _state = _CheckState.error;
-          _loadingController.stop();
-          _loadingController.reset();
-        });
-      }
+    // 发现新版本时弹出更新提示
+    if (_state == _CheckState.newVersion) {
+      _showUpdateDialog();
     }
   }
 
-  void _downloadUpdate() {
-    // TODO: 调用真实下载逻辑
-    // 例如：openFileX 打开 _downloadUrl，或跳转到应用商店
+  _CheckState _mapResult(CheckResult r) {
+    switch (r) {
+      case CheckResult.upToDate:
+        return _CheckState.upToDate;
+      case CheckResult.newVersion:
+        return _CheckState.newVersion;
+      case CheckResult.error:
+        return _CheckState.error;
+    }
+  }
+
+  /// 弹出更新提示对话框（支持取消）
+  void _showUpdateDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.system_update, color: AppColors.primary, size: 24),
+              const SizedBox(width: 8),
+              const Text('发现新版本'),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 320),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'v$_currentVersion → v$_latestVersion',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '更新内容：',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _releaseNotes.isEmpty ? '暂无更新说明' : _releaseNotes,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                '稍后再说',
+                style: TextStyle(color: AppColors.textHint),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _downloadUpdate();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('去更新'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 调用系统浏览器打开 GitHub Release 页面
+  Future<void> _downloadUpdate() async {
+    final url = _htmlUrl.isNotEmpty
+        ? _htmlUrl
+        : UpdateService.githubReleasesUrl;
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (mounted) {
+        ToastUtils.show(context, '下载地址无效');
+      }
+      return;
+    }
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ToastUtils.show(context, '无法打开浏览器，请稍后重试');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastUtils.show(context, '打开更新页面失败：$e');
+      }
+    }
   }
 
   // ─── Build ──────────────────────────────────
@@ -159,8 +271,11 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                   ),
                 ],
               ),
-              child: const Icon(Icons.chevron_left,
-                  size: 20, color: AppColors.textSecondary),
+              child: const Icon(
+                Icons.chevron_left,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -365,11 +480,11 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
           child: Icon(Icons.check_circle, size: 26, color: AppColors.success),
         ),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 '已是最新版本',
                 style: TextStyle(
                   fontSize: 15,
@@ -377,10 +492,10 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                   color: AppColors.success,
                 ),
               ),
-              SizedBox(height: 3),
+              const SizedBox(height: 3),
               Text(
                 '当前版本 v$_currentVersion 已是最新',
-                style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                style: const TextStyle(fontSize: 12, color: AppColors.textHint),
               ),
             ],
           ),
@@ -402,8 +517,11 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                 color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(Icons.new_releases,
-                  size: 26, color: AppColors.primary),
+              child: Icon(
+                Icons.new_releases,
+                size: 26,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -422,7 +540,9 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                   Text(
                     '当前 v$_currentVersion → v$_latestVersion',
                     style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -462,11 +582,11 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
           child: Icon(Icons.error_outline, size: 26, color: AppColors.danger),
         ),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 '检查失败',
                 style: TextStyle(
                   fontSize: 15,
@@ -474,10 +594,10 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                   color: AppColors.danger,
                 ),
               ),
-              SizedBox(height: 3),
+              const SizedBox(height: 3),
               Text(
-                '网络连接异常，请稍后重试',
-                style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                _errorMessage.isEmpty ? '网络连接异常，请稍后重试' : _errorMessage,
+                style: const TextStyle(fontSize: 12, color: AppColors.textHint),
               ),
             ],
           ),
@@ -499,7 +619,8 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.warning]),
+              colors: [AppColors.primary, AppColors.warning],
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.3),
@@ -534,7 +655,8 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
           gradient: isChecking
               ? null
               : const LinearGradient(
-                  colors: [AppColors.primary, AppColors.warning]),
+                  colors: [AppColors.primary, AppColors.warning],
+                ),
           color: isChecking ? AppColors.border : null,
           boxShadow: isChecking
               ? null
@@ -632,7 +754,7 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'API: $_checkUpdateApi',
+            '当前版本 v$_currentVersion',
             style: TextStyle(
               fontSize: 10,
               color: AppColors.textHint.withValues(alpha: 0.6),

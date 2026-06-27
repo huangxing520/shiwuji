@@ -195,8 +195,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
           const SizedBox(width: 12),
-          _buildHeaderAction(Icons.notifications_none, badgeCount: 3),
-          _buildHeaderAction(Icons.settings),
+          //_buildHeaderAction(Icons.notifications_none, badgeCount: 3),
+          //_buildHeaderAction(Icons.settings),
         ],
       ),
     );

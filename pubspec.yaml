@@ -15,6 +15,7 @@ dependencies:
   flutter_riverpod: ^3.3.2
   riverpod_annotation: ^4.0.3
   go_router: ^17.3.0
+  dio: ^5.7.0
   uuid: ^4.5.1
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
@@ -25,6 +26,8 @@ dependencies:
   flutter_local_notifications: ^19.1.0
   timezone: ^0.10.0
   flutter_datetime_picker_plus: ^2.2.0
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.1.2
 
 dev_dependencies:
   flutter_test:
