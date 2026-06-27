@@ -36,13 +36,27 @@ jobs:
 
       # 5. 配置签名文件（自动从 GitHub 密钥读取，无需手动上传）
       - name: 生成签名文件
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/keystore.jks
-          echo "storeFile=keystore.jks" > key.properties
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> key.properties
+          # 用 printf 避免换行；先校验 secret 非空
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret 未设置"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+          if [ ! -s app/keystore.jks ]; then
+            echo "::error::keystore.jks 解码后为空文件，请检查 KEYSTORE_BASE64 是否为有效 base64"
+            exit 1
+          fi
+          printf 'storeFile=keystore.jks\n' > key.properties
+          printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD" >> key.properties
+          printf 'keyAlias=%s\n' "$KEY_ALIAS" >> key.properties
+          printf 'keyPassword=%s\n' "$KEY_PASSWORD" >> key.properties
 
       # 6. 构建 Release 版 APK
       - name: 编译生成 APK
