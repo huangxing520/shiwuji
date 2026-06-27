@@ -40,18 +40,21 @@ class NotificationService {
 
     tz.initializeTimeZones();
 
-    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
+    const androidSettings = AndroidInitializationSettings(
+      '@drawable/ic_notification',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
     // Android 13+ (API 33) 需要运行时请求通知权限
     if (!kIsWeb && Platform.isAndroid) {
-      final androidPlugin =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await androidPlugin?.requestNotificationsPermission();
       await androidPlugin?.requestExactAlarmsPermission();
     }
@@ -76,7 +79,9 @@ class NotificationService {
   int get reminderDays => _reminderDays;
 
   /// 从 Settings DAO 加载偏好
-  Future<void> loadPreferences(Future<String?> Function(String) getValue) async {
+  Future<void> loadPreferences(
+    Future<String?> Function(String) getValue,
+  ) async {
     final enabled = await getValue(keyNotificationsEnabled);
     _enabled = enabled != 'false'; // 默认 true
 
@@ -85,8 +90,11 @@ class NotificationService {
   }
 
   /// 保存偏好到 Settings DAO
-  Future<void> savePreferences(Future<void> Function(String, String) setValue,
-      {bool? enabled, int? reminderDays}) async {
+  Future<void> savePreferences(
+    Future<void> Function(String, String) setValue, {
+    bool? enabled,
+    int? reminderDays,
+  }) async {
     if (enabled != null) {
       _enabled = enabled;
       await setValue(keyNotificationsEnabled, enabled.toString());
@@ -118,11 +126,11 @@ class NotificationService {
 
     try {
       await _plugin.zonedSchedule(
-        item.id.hashCode,
-        '保修即将到期',
-        '「${item.name}」保修将于 ${warrantyEnd.month}月${warrantyEnd.day}日 到期',
-        tz.TZDateTime.from(reminderDate, tz.local),
-        const NotificationDetails(
+        id: item.id.hashCode,
+        title: '保修即将到期',
+        body: '「${item.name}」保修将于 ${warrantyEnd.month}月${warrantyEnd.day}日 到期',
+        scheduledDate: tz.TZDateTime.from(reminderDate, tz.local),
+        notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'warranty_reminder',
             '保修到期提醒',
@@ -135,8 +143,7 @@ class NotificationService {
         matchDateTimeComponents: null,
         payload: item.id,
       );
-      debugPrint(
-          '[NotificationService] 已调度提醒: ${item.name} → $reminderDate');
+      debugPrint('[NotificationService] 已调度提醒: ${item.name} → $reminderDate');
     } catch (e) {
       debugPrint('[NotificationService] 调度通知失败: $e');
     }
@@ -146,7 +153,7 @@ class NotificationService {
   Future<void> cancelWarrantyReminder(String itemId) async {
     if (!_platformSupported) return;
     try {
-      await _plugin.cancel(itemId.hashCode);
+      await _plugin.cancel(id: itemId.hashCode);
     } catch (e) {
       debugPrint('[NotificationService] 取消通知失败: $e');
     }
@@ -167,10 +174,10 @@ class NotificationService {
     if (!_platformSupported) return;
     try {
       await _plugin.show(
-        99999,
-        '拾物记 · 通知测试',
-        '通知功能正常运行，保修到期提醒已开启',
-        const NotificationDetails(
+        id: 99999,
+        title: '拾物记 · 通知测试',
+        body: '通知功能正常运行，保修到期提醒已开启',
+        notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'warranty_reminder',
             '保修到期提醒',

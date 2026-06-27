@@ -1,4 +1,4 @@
-# 拾物记 (shi_wu_ji)
+# 拾物记 
 
 一款基于 Flutter 的家庭物品收纳管理 App，帮助你记录物品存放位置、归类整理、提醒保质期，并支持 WebDAV 云端备份与 GitHub Release 自动更新检查。
 
@@ -25,7 +25,7 @@
 | 本地存储 | drift 2（类型安全 SQLite ORM） |
 | 云端备份 | webdav_client 1.2 |
 | 模型序列化 | freezed 3 + json_serializable |
-| 通知 | flutter_local_notifications 19 |
+| 通知 | flutter_local_notifications 22 |
 | 版本信息 | package_info_plus 8 |
 | 浏览器跳转 | url_launcher 6 |
 
@@ -70,8 +70,6 @@ dart run build_runner build --delete-conflicting-outputs
 
 # 3. 运行
 flutter run                    # 默认设备
-flutter run -d windows         # Windows 桌面
-flutter run -d chrome          # Web
 ```
 
 ### 代码生成
@@ -112,39 +110,10 @@ flutter build linux
 flutter build web --release
 ```
 
-## CI/CD
 
-仓库内置 GitHub Actions workflow：[.github/workflows/flutter_build_apk.yml](.github/workflows/flutter_build_apk.yml)
 
-推送 `v*` 标签（如 `v1.0.0`）自动触发：拉取代码 → 配置 Flutter/Java → 解码签名 → 构建 APK → 发布到 GitHub Release。
 
-所需 GitHub Secrets：
-
-| Secret | 说明 |
-| --- | --- |
-| `KEYSTORE_BASE64` | `keystore.jks` 的 base64 编码字符串 |
-| `KEYSTORE_PASSWORD` | keystore 密码 |
-| `KEY_ALIAS` | 签名 key 别名 |
-| `KEY_PASSWORD` | 签名 key 密码 |
-
-本地生成 `KEYSTORE_BASE64`：
-
-```powershell
-$bytes = [System.IO.File]::ReadAllBytes("android\app\keystore.jks")
-[System.Convert]::ToBase64String($bytes) | Set-Clipboard
-```
-
-## 版本更新检查机制
-
-应用内「我的 → 检查更新」通过 [update_service.dart](lib/services/update_service.dart) 调用 GitHub Releases API：
-
-1. 请求 `https://github.com/huangxing520/shiwuji/releases`
-2. 解析 `tag_name` 提取最新版本号
-3. 与本地版本（`package_info_plus` 读取 `pubspec.yaml` 的 `version`）比较
-4. 有新版本则弹窗展示更新说明，点击「去更新」用 `url_launcher` 打开 release 页面
-
-发版只需修改 [pubspec.yaml](pubspec.yaml) 中的 `version:` 字段，无需改代码。
 
 ## 许可证
 
-私有项目，未授权不得商业使用。
+本项目采用 [MIT License](LICENSE) 开源协议。
