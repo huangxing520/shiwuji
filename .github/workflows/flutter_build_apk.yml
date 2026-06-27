@@ -10,6 +10,8 @@ on:
 jobs:
   build-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write          # 允许创建 Release
     steps:
       # 1. 拉取项目代码
       - name: 拉取代码
@@ -64,12 +66,9 @@ jobs:
 
       # 7. 自动发布到 GitHub Release
       - name: 发布 APK
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: build/app/outputs/flutter-apk/*.apk
-          name:  ${{ github.ref_name }}
-          body: |
-            🚀 自动构建完成
-            版本：${{ github.ref_name }}
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
