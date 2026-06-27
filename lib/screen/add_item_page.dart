@@ -1,158 +1,42 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DatePickerTheme;
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
+import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/models/template.dart';
+import 'package:shi_wu_ji/models/picker_item.dart';
+import 'package:shi_wu_ji/models/photo_data.dart';
+import 'package:shi_wu_ji/models/item.dart';
+import 'package:shi_wu_ji/providers/item_providers.dart';
+import 'package:shi_wu_ji/providers/storage_providers.dart';
+import 'package:shi_wu_ji/services/notification_service.dart';
 
-// ==================== 颜色常量 ====================
-class AppColors {
-  static const Color bg = Color(0xFFFFF8E7);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color fg = Color(0xFF3D2B1F);
-  static const Color fgSecondary = Color(0xFF7A6555);
-  static const Color muted = Color(0xFFB8A48E);
-  static const Color border = Color(0xFFF0E4D0);
-  static const Color accent = Color(0xFFFFB800);
-  static const Color accentLight = Color(0xFFFFE066);
-  static const Color accentDark = Color(0xFFE5A500);
-  static const Color orange = Color(0xFFFF8C42);
-  static const Color orangeLight = Color(0xFFFFD4B8);
-  static const Color green = Color(0xFF6BCB77);
-  static const Color greenLight = Color(0xFFD4F5D9);
-  static const Color red = Color(0xFFFF6B6B);
-  static const Color redLight = Color(0xFFFFD4D4);
-  static const Color blue = Color(0xFF5B9BFF);
-  static const Color blueLight = Color(0xFFD4E8FF);
-  static const Color purple = Color(0xFF9B7BFF);
-  static const Color purpleLight = Color(0xFFE4DAFF);
-}
-
-// ==================== 数据模型 ====================
-class TemplateField {
-  final String label;
-  final String placeholder;
-  final String id;
-  final bool isDate;
-
-  const TemplateField({
-    required this.label,
-    required this.placeholder,
-    required this.id,
-    this.isDate = false,
-  });
-}
-
-class TemplateData {
-  final String name;
-  final List<TemplateField> fields;
-
-  const TemplateData({required this.name, required this.fields});
-}
-
-class PickerItem {
-  final String emoji;
-  final String name;
-
-  const PickerItem({required this.emoji, required this.name});
-}
-
-// ==================== 模板 & 选择器数据 ====================
-const Map<String, TemplateData?> templateFieldsMap = {
-  'none': null,
-  'digital': TemplateData(
-    name: '数码专属属性',
-    fields: [
-      TemplateField(label: '型号', placeholder: '例如：A2696', id: 'tplModel'),
-      TemplateField(label: '序列号/IMEI', placeholder: '设备唯一标识', id: 'tplSerial'),
-      TemplateField(label: '存储容量', placeholder: '例如：256GB', id: 'tplStorage'),
-      TemplateField(label: '购买渠道', placeholder: '例如：官网/授权店', id: 'tplChannel'),
-    ],
-  ),
-  'beauty': TemplateData(
-    name: '美妆专属属性',
-    fields: [
-      TemplateField(label: '色号/规格', placeholder: '例如：#23 Ivory', id: 'tplShade'),
-      TemplateField(label: '生产批号', placeholder: '瓶身标注的批号', id: 'tplBatch'),
-      TemplateField(label: '开盖日期', placeholder: '首次开封使用日期', id: 'tplOpenDate', isDate: true),
-      TemplateField(label: '开封保质期', placeholder: '例如：12M', id: 'tplPAO'),
-    ],
-  ),
-  'clothing': TemplateData(
-    name: '服饰专属属性',
-    fields: [
-      TemplateField(label: '尺码', placeholder: '例如：M / 170/92A', id: 'tplSize'),
-      TemplateField(label: '材质', placeholder: '例如：100%棉', id: 'tplMaterial'),
-      TemplateField(label: '颜色', placeholder: '例如：藏青色', id: 'tplColor'),
-      TemplateField(label: '季节', placeholder: '例如：春夏', id: 'tplSeason'),
-    ],
-  ),
-  'food': TemplateData(
-    name: '食品专属属性',
-    fields: [
-      TemplateField(label: '净含量', placeholder: '例如：500g', id: 'tplWeight'),
-      TemplateField(label: '生产日期', placeholder: '', id: 'tplProdDate', isDate: true),
-      TemplateField(label: '保质期', placeholder: '例如：12个月', id: 'tplShelfLife'),
-      TemplateField(label: '存储条件', placeholder: '例如：阴凉干燥处', id: 'tplStorage2'),
-    ],
-  ),
-  'book': TemplateData(
-    name: '书籍专属属性',
-    fields: [
-      TemplateField(label: '作者', placeholder: '例如：原研哉', id: 'tplAuthor'),
-      TemplateField(label: '出版社', placeholder: '例如：山东人民出版社', id: 'tplPublisher'),
-      TemplateField(label: 'ISBN', placeholder: '国际标准书号', id: 'tplISBN'),
-      TemplateField(label: '版本', placeholder: '例如：第一版', id: 'tplEdition'),
-    ],
-  ),
+/// 分类标签 → key 映射（手动选择分类时使用）
+const Map<String, String> _categoryLabelToKey = {
+  '数码': 'digital',
+  '家电': 'appliance',
+  '护肤': 'skincare',
+  '厨房': 'kitchen',
+  '衣物': 'clothing',
+  '书籍': 'books',
+  '收纳': 'storage',
+  '玩具': 'toys',
+  '运动': 'sports',
+  '文具': 'stationery',
+  '钥匙': 'keys',
+  '工具': 'tools',
 };
 
-const List<Map<String, String>> templateCards = [
-  {'key': 'none', 'emoji': '📝', 'name': '通用'},
-  {'key': 'digital', 'emoji': '📱', 'name': '数码'},
-  {'key': 'beauty', 'emoji': '💄', 'name': '美妆'},
-  {'key': 'clothing', 'emoji': '👔', 'name': '服饰'},
-  {'key': 'food', 'emoji': '🍜', 'name': '食品'},
-  {'key': 'book', 'emoji': '📚', 'name': '书籍'},
-];
-
-const List<String> sourceOptions = ['线下购买', '亲友赠送', '二手收购', '闲置已有', '其他'];
-
-const List<PickerItem> categoryData = [
-  PickerItem(emoji: '📱', name: '数码'),
-  PickerItem(emoji: '🏠', name: '家电'),
-  PickerItem(emoji: '💄', name: '护肤'),
-  PickerItem(emoji: '🍚', name: '厨房'),
-  PickerItem(emoji: '👔', name: '衣物'),
-  PickerItem(emoji: '📚', name: '书籍'),
-  PickerItem(emoji: '📦', name: '收纳'),
-  PickerItem(emoji: '🧸', name: '玩具'),
-  PickerItem(emoji: '🏋️', name: '运动'),
-  PickerItem(emoji: '🎨', name: '文具'),
-  PickerItem(emoji: '🔑', name: '钥匙'),
-  PickerItem(emoji: '🔧', name: '工具'),
-];
-
-const List<PickerItem> locationData = [
-  PickerItem(emoji: '🛋️', name: '客厅'),
-  PickerItem(emoji: '🛏️', name: '卧室'),
-  PickerItem(emoji: '📚', name: '书房'),
-  PickerItem(emoji: '🍳', name: '厨房'),
-  PickerItem(emoji: '🚿', name: '浴室'),
-  PickerItem(emoji: '🗄️', name: '储物间'),
-  PickerItem(emoji: '🚪', name: '玄关'),
-  PickerItem(emoji: '🧒', name: '儿童房'),
-  PickerItem(emoji: '♿', name: '阳台'),
-  PickerItem(emoji: '🚗', name: '车里'),
-  PickerItem(emoji: '🏢', name: '办公室'),
-  PickerItem(emoji: '🎒', name: '随身包'),
-];
-
 // ==================== 主页面 ====================
-class AddItemPage extends StatefulWidget {
+class AddItemPage extends ConsumerStatefulWidget {
   const AddItemPage({super.key});
 
   @override
-  State<AddItemPage> createState() => _AddItemPageState();
+  ConsumerState<AddItemPage> createState() => _AddItemPageState();
 }
 
-class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin {
+class _AddItemPageState extends ConsumerState<AddItemPage>
+    with TickerProviderStateMixin {
   // 表单控制器
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
@@ -165,18 +49,15 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   final Map<String, TextEditingController> _tplControllers = {};
 
   // 照片（模拟用 emoji + 颜色替代）
-  final List<_PhotoData> _photos = [];
-  static const _photoEmojis = ['📷', '🖼️', '📸', '🏞️', '🏠', '✨'];
-  static const _photoColors = [
-    Color(0xFFFFE8CC), Color(0xFFE8F5E9), Color(0xFFE3F2FD),
-    Color(0xFFF3E5F5), Color(0xFFFFF9C4), Color(0xFFFFEBEE),
-  ];
+  final List<PhotoData> _photos = [];
 
   // 状态
   String _selectedTemplate = 'none';
   String _selectedSource = '线下购买';
   String? _selectedCategory;
+  String? _selectedCategoryKey;
   String? _selectedLocation;
+  StorageLocationNode? _selectedLocationNode;
 
   // 提醒开关
   bool _expiryOn = false;
@@ -249,11 +130,16 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppColors.fg,
+        backgroundColor: AppColors.textPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
-        margin: const EdgeInsets.only(top: 60, left: 80, right: 80, bottom: 700),
+        margin: const EdgeInsets.only(
+          top: 60,
+          left: 80,
+          right: 80,
+          bottom: 700,
+        ),
       ),
     );
   }
@@ -266,10 +152,12 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     }
     setState(() {
       final idx = _photos.length;
-      _photos.add(_PhotoData(
-        emoji: _photoEmojis[idx % _photoEmojis.length],
-        color: _photoColors[idx % _photoColors.length],
-      ));
+      _photos.add(
+        PhotoData(
+          emoji: photoEmojis[idx % photoEmojis.length],
+          color: photoColors[idx % photoColors.length],
+        ),
+      );
     });
     _showToast('图片已添加（模拟）');
   }
@@ -289,6 +177,19 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         c.dispose();
       }
       _tplControllers.clear();
+
+      // 品类模版与分类一一对应：非通用模版自动设置分类
+      if (key == 'none') {
+        _selectedCategory = null;
+        _selectedCategoryKey = null;
+      } else {
+        final card = TemplateCard.cards.firstWhere(
+          (c) => c.key == key,
+          orElse: () => TemplateCard(key: key, emoji: '📦', name: key),
+        );
+        _selectedCategory = card.name;
+        _selectedCategoryKey = key;
+      }
     });
 
     final data = templateFieldsMap[key];
@@ -321,6 +222,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           setState(() {
             if (isCategory) {
               _selectedCategory = name;
+              _selectedCategoryKey = _categoryLabelToKey[name];
             } else {
               _selectedLocation = name;
             }
@@ -332,44 +234,141 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     );
   }
 
-  // ==================== 日期选择 ====================
-  Future<void> _pickDate(TextEditingController controller, {void Function(DateTime)? onPicked}) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
+  // ==================== 收纳位置选择（联动柜体/格子）====================
+  void _openLocationPicker() {
+    showModalBottomSheet(
       context: context,
-      initialDate: now,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: AppColors.accent),
-          ),
-          child: child!,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Consumer(
+          builder: (ctx, ref, _) {
+            final asyncNodes = ref.watch(storageLocationTreeProvider);
+            return _LocationPickerSheet(
+              nodes: asyncNodes.value ?? const [],
+              isLoading: asyncNodes.isLoading,
+              selectedNode: _selectedLocationNode,
+              onPick: (node) {
+                setState(() {
+                  _selectedLocationNode = node;
+                  _selectedLocation = node.pathLabel;
+                });
+                Navigator.pop(ctx);
+                _showToast('已选择：${node.pathLabel}');
+              },
+              onClear: () {
+                setState(() {
+                  _selectedLocationNode = null;
+                  _selectedLocation = null;
+                });
+                Navigator.pop(ctx);
+              },
+            );
+          },
         );
       },
     );
-    if (picked != null) {
-      controller.text =
-          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      onPicked?.call(picked);
+  }
+
+  // ==================== 日期选择 ====================
+  Future<void> _pickDate(
+    TextEditingController controller, {
+    void Function(DateTime)? onPicked,
+  }) async {
+    final now = DateTime.now();
+    // 尝试解析控制器中已有的日期作为初始值
+    DateTime currentDate = now;
+    if (controller.text.isNotEmpty) {
+      try {
+        currentDate = DateTime.parse(controller.text);
+      } catch (_) {}
     }
+
+    await DatePicker.showDatePicker(
+      context,
+      showTitleActions: true,
+      minTime: DateTime(2000, 1, 1),
+      maxTime: DateTime(2100, 12, 31),
+      currentTime: currentDate,
+      theme: DatePickerTheme(
+        titleHeight: 45,
+        itemStyle: const TextStyle(fontSize: 18, color: AppColors.textPrimary),
+        doneStyle: const TextStyle(
+          fontSize: 16,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+        ),
+        cancelStyle: const TextStyle(
+          fontSize: 16,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      locale: LocaleType.zh,
+      onChanged: (date) {},
+      onConfirm: (date) {
+        controller.text =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        onPicked?.call(date);
+      },
+    );
   }
 
   // ==================== 保存 ====================
   void _saveItem(bool andContinue) {
     final name = _nameController.text.trim();
-    final price = _priceController.text.trim();
+    final priceStr = _priceController.text.trim();
 
     if (name.isEmpty) {
       _showToast('请填写物品名称');
       FocusScope.of(context).unfocus();
       return;
     }
-    if (price.isEmpty) {
-      _showToast('请填写购买价格');
+    final price = double.tryParse(priceStr);
+    if (price == null || price <= 0) {
+      _showToast('请填写有效的购买价格');
       FocusScope.of(context).unfocus();
       return;
+    }
+
+    // 解析购买日期
+    DateTime purchaseDate = DateTime.now();
+    if (_buyDateController.text.isNotEmpty) {
+      try {
+        purchaseDate = DateTime.parse(_buyDateController.text);
+      } catch (_) {}
+    }
+
+    // 计算保修天数
+    int warrantyDays = 365;
+    if (_warrantyOn && _warrantyDateController.text.isNotEmpty) {
+      try {
+        final warrantyEnd = DateTime.parse(_warrantyDateController.text);
+        warrantyDays = warrantyEnd.difference(purchaseDate).inDays;
+        if (warrantyDays < 0) warrantyDays = 365;
+      } catch (_) {}
+    }
+
+    // 创建 Item 并写入数据库
+    final node = _selectedLocationNode;
+    final item = Item.create(
+      name: name,
+      price: price,
+      emoji: '📦',
+      category: _selectedCategory ?? '未分类',
+      location: _selectedLocation ?? '未知',
+      purchaseDate: purchaseDate,
+      warrantyDays: warrantyDays,
+      status: 'safe',
+      categoryKey: _selectedCategoryKey ?? '',
+      cabinetId: node?.cabinetId,
+      slotId: node?.isSlot == true ? node?.id : null,
+    );
+
+    ref.read(itemsProvider.notifier).addItem(item);
+
+    // 如果开启了保修提醒，调度到期通知
+    if (_warrantyOn && _warrantyDate != null) {
+      NotificationService().scheduleWarrantyReminder(item);
     }
 
     if (andContinue) {
@@ -407,7 +406,9 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       _selectedTemplate = 'none';
       _selectedSource = '线下购买';
       _selectedCategory = null;
+      _selectedCategoryKey = null;
       _selectedLocation = null;
+      _selectedLocationNode = null;
       _expiryOn = false;
       _warrantyOn = false;
       _maintainOn = false;
@@ -430,7 +431,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           // 主内容
@@ -494,11 +495,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.cardBg,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.fg.withOpacity(0.06),
+                    color: AppColors.textPrimary.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 2),
                   ),
@@ -507,7 +508,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               child: const Icon(
                 Icons.chevron_left,
                 size: 20,
-                color: AppColors.fgSecondary,
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -517,7 +518,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w900,
-              color: AppColors.fg,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -542,18 +543,26 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.cardBg,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.border, width: 2.5, strokeAlign: BorderSide.strokeAlignInside),
+                  border: Border.all(
+                    color: AppColors.border,
+                    width: 2.5,
+                    strokeAlign: BorderSide.strokeAlignInside,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add, size: 28, color: AppColors.muted),
+                    Icon(Icons.add, size: 28, color: AppColors.textHint),
                     const SizedBox(height: 6),
                     const Text(
                       '添加照片',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textHint,
+                      ),
                     ),
                   ],
                 ),
@@ -568,7 +577,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
-                BoxShadow(color: AppColors.fg.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 2)),
+                BoxShadow(
+                  color: AppColors.textPrimary.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             clipBehavior: Clip.antiAlias,
@@ -578,7 +591,10 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 Container(
                   color: photo.color,
                   child: Center(
-                    child: Text(photo.emoji, style: const TextStyle(fontSize: 36)),
+                    child: Text(
+                      photo.emoji,
+                      style: const TextStyle(fontSize: 36),
+                    ),
                   ),
                 ),
                 // 删除按钮
@@ -591,10 +607,14 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.close, size: 12, color: Colors.white),
+                      child: const Icon(
+                        Icons.close,
+                        size: 12,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -608,13 +628,17 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppColors.accent, AppColors.orange],
+                          colors: [AppColors.primary, AppColors.warning],
                         ),
                       ),
                       child: const Text(
                         '封面',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -633,11 +657,15 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       children: [
         Row(
           children: [
-            Icon(Icons.grid_view, size: 14, color: AppColors.accentDark),
+            Icon(Icons.grid_view, size: 14, color: AppColors.primaryDark),
             const SizedBox(width: 6),
             const Text(
               '品类模板 · 一键匹配专属属性',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.fgSecondary),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -646,11 +674,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           height: 46,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: templateCards.length,
+            itemCount: TemplateCard.cards.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
-              final card = templateCards[index];
-              final key = card['key']!;
+              final card = TemplateCard.cards[index];
+              final key = card.key;
               final isSelected = _selectedTemplate == key;
               return GestureDetector(
                 onTap: () => _selectTemplate(key),
@@ -658,27 +686,45 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                   duration: const Duration(milliseconds: 250),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFFFF3CC) : AppColors.surface,
+                    color: isSelected
+                        ? const Color(0xFFFFF3CC)
+                        : AppColors.cardBg,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isSelected ? AppColors.accent : AppColors.border,
+                      color: isSelected ? AppColors.primary : AppColors.border,
                       width: 1.5,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: AppColors.accent.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 4))]
-                        : [BoxShadow(color: AppColors.fg.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 2))],
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: AppColors.textPrimary.withValues(
+                                alpha: 0.06,
+                              ),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(card['emoji']!, style: const TextStyle(fontSize: 22)),
+                      Text(card.emoji, style: const TextStyle(fontSize: 22)),
                       const SizedBox(width: 8),
                       Text(
-                        card['name']!,
+                        card.name,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isSelected ? AppColors.accentDark : AppColors.fgSecondary,
+                          color: isSelected
+                              ? AppColors.primaryDark
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -708,7 +754,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.bg,
+            color: AppColors.background,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -716,11 +762,19 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             children: [
               Row(
                 children: [
-                  Icon(Icons.info_outline, size: 14, color: AppColors.accentDark),
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: AppColors.primaryDark,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     data.name,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accentDark),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
                   ),
                 ],
               ),
@@ -731,48 +785,51 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 (row) => Padding(
                   padding: EdgeInsets.only(top: row > 0 ? 10 : 0),
                   child: Row(
-                    children: List.generate(
-                      2,
-                      (col) {
-                        final fieldIdx = row * 2 + col;
-                        if (fieldIdx >= data.fields.length) {
-                          return const Expanded(child: SizedBox());
-                        }
-                        final field = data.fields[fieldIdx];
-                        final ctrl = _tplControllers[field.id]!;
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(left: col > 0 ? 5 : 0, right: col > 0 ? 0 : 5),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    field.label,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.fgSecondary,
-                                    ),
+                    children: List.generate(2, (col) {
+                      final fieldIdx = row * 2 + col;
+                      if (fieldIdx >= data.fields.length) {
+                        return const Expanded(child: SizedBox());
+                      }
+                      final field = data.fields[fieldIdx];
+                      final ctrl = _tplControllers[field.id]!;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: col > 0 ? 5 : 0,
+                            right: col > 0 ? 0 : 5,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  field.label,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
-                                _buildInput(
-                                  controller: ctrl,
-                                  placeholder: field.placeholder,
-                                  fontSize: 13,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                                  onTap: field.isDate
-                                      ? () => _pickDate(ctrl)
-                                      : null,
-                                  readOnly: field.isDate,
+                              ),
+                              _buildInput(
+                                controller: ctrl,
+                                placeholder: field.placeholder,
+                                fontSize: 13,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 9,
                                 ),
-                              ],
-                            ),
+                                onTap: field.isDate
+                                    ? () => _pickDate(ctrl)
+                                    : null,
+                                readOnly: field.isDate,
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ),
@@ -792,7 +849,10 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         // 物品名称
         _buildLabel('物品名称', required: true),
         const SizedBox(height: 6),
-        _buildInput(controller: _nameController, placeholder: '例如：AirPods Pro 2'),
+        _buildInput(
+          controller: _nameController,
+          placeholder: '例如：AirPods Pro 2',
+        ),
         const SizedBox(height: 14),
         // 品牌
         _buildLabel('品牌'),
@@ -811,8 +871,12 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                   _buildInput(
                     controller: _priceController,
                     placeholder: '¥0.00',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                    ],
                   ),
                 ],
               ),
@@ -829,7 +893,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     placeholder: '选择日期',
                     readOnly: true,
                     onTap: () => _pickDate(_buyDateController),
-                    suffix: Icon(Icons.expand_more, size: 14, color: AppColors.muted),
+                    suffix: Icon(
+                      Icons.expand_more,
+                      size: 14,
+                      color: AppColors.textHint,
+                    ),
                   ),
                 ],
               ),
@@ -849,12 +917,17 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               onTap: () => setState(() => _selectedSource = source),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFFFF3CC) : AppColors.bg,
+                  color: isSelected
+                      ? const Color(0xFFFFF3CC)
+                      : AppColors.background,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected ? AppColors.accent : AppColors.border,
+                    color: isSelected ? AppColors.primary : AppColors.border,
                     width: 1.5,
                   ),
                 ),
@@ -863,7 +936,9 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? AppColors.accentDark : AppColors.fgSecondary,
+                    color: isSelected
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -893,6 +968,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     text: _selectedCategory ?? '选择分类',
                     hasValue: _selectedCategory != null,
                     onTap: () => _openPicker(isCategory: true),
+                    disabled: _selectedTemplate != 'none',
                   ),
                 ],
               ),
@@ -908,7 +984,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                   _buildSelectTrigger(
                     text: _selectedLocation ?? '选择位置',
                     hasValue: _selectedLocation != null,
-                    onTap: () => _openPicker(isCategory: false),
+                    onTap: _openLocationPicker,
                   ),
                 ],
               ),
@@ -969,7 +1045,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                                   });
                                 },
                               ),
-                              suffix: Icon(Icons.expand_more, size: 14, color: AppColors.muted),
+                              suffix: Icon(
+                                Icons.expand_more,
+                                size: 14,
+                                color: AppColors.textHint,
+                              ),
                             ),
                           ],
                         ),
@@ -985,7 +1065,26 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           title: '保修到期提醒',
           desc: '保修到期前7天/30天推送通知',
           isOn: _warrantyOn,
-          onToggle: () => setState(() => _warrantyOn = !_warrantyOn),
+          onToggle: () {
+            setState(() {
+              _warrantyOn = !_warrantyOn;
+              if (_warrantyOn && _warrantyDateController.text.isEmpty) {
+                // 默认保修期 1 年（购买日期 + 365 天）
+                DateTime purchaseDate = DateTime.now();
+                if (_buyDateController.text.isNotEmpty) {
+                  try {
+                    purchaseDate = DateTime.parse(_buyDateController.text);
+                  } catch (_) {}
+                }
+                final defaultWarrantyEnd = purchaseDate.add(
+                  const Duration(days: 365),
+                );
+                _warrantyDate = defaultWarrantyEnd;
+                _warrantyDateController.text =
+                    '${defaultWarrantyEnd.year}-${defaultWarrantyEnd.month.toString().padLeft(2, '0')}-${defaultWarrantyEnd.day.toString().padLeft(2, '0')}';
+              }
+            });
+          },
         ),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -1015,7 +1114,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                                   });
                                 },
                               ),
-                              suffix: Icon(Icons.expand_more, size: 14, color: AppColors.muted),
+                              suffix: Icon(
+                                Icons.expand_more,
+                                size: 14,
+                                color: AppColors.textHint,
+                              ),
                             ),
                           ],
                         ),
@@ -1064,7 +1167,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.bg,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border, width: 1.5),
       ),
@@ -1072,14 +1175,22 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         child: DropdownButton<String>(
           value: _maintainCycle,
           isExpanded: true,
-          icon: Icon(Icons.expand_more, size: 16, color: AppColors.muted),
-          dropdownColor: AppColors.surface,
+          icon: Icon(Icons.expand_more, size: 16, color: AppColors.textHint),
+          dropdownColor: AppColors.cardBg,
           borderRadius: BorderRadius.circular(12),
           items: ['每月', '每季度', '每半年', '每年']
-              .map((v) => DropdownMenuItem(
-                    value: v,
-                    child: Text(v, style: const TextStyle(fontSize: 14, color: AppColors.fg)),
-                  ))
+              .map(
+                (v) => DropdownMenuItem(
+                  value: v,
+                  child: Text(
+                    v,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => _maintainCycle = v ?? '每半年'),
         ),
@@ -1104,9 +1215,22 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.fg)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textHint,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1118,7 +1242,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               width: 48,
               height: 28,
               decoration: BoxDecoration(
-                color: isOn ? AppColors.accent : AppColors.border,
+                color: isOn ? AppColors.primary : AppColors.border,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: AnimatedAlign(
@@ -1132,7 +1256,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     color: Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 1)),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
                     ],
                   ),
                 ),
@@ -1151,11 +1279,19 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [AppColors.bg, AppColors.bg.withOpacity(0)],
+          colors: [
+            AppColors.background,
+            AppColors.background.withValues(alpha: 0),
+          ],
           stops: const [0.6, 1.0],
         ),
       ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 20),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        12,
+        20,
+        MediaQuery.of(context).padding.bottom + 20,
+      ),
       child: Row(
         children: [
           // 保存入库
@@ -1166,15 +1302,25 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(colors: [AppColors.accent, AppColors.orange]),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.warning],
+                  ),
                   boxShadow: [
-                    BoxShadow(color: AppColors.accent.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 4)),
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: const Center(
                   child: Text(
                     '保存入库',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -1189,13 +1335,17 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.accent, width: 2),
+                  color: AppColors.cardBg,
+                  border: Border.all(color: AppColors.primary, width: 2),
                 ),
                 child: const Center(
                   child: Text(
                     '保存并继续新增',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.accentDark),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
                   ),
                 ),
               ),
@@ -1209,7 +1359,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   // ==================== 成功弹窗 ====================
   Widget _buildSuccessOverlay() {
     return Container(
-      color: AppColors.bg.withOpacity(0.96),
+      color: AppColors.background.withValues(alpha: 0.96),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1220,35 +1370,57 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               height: 100,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [AppColors.greenLight, AppColors.green]),
+                gradient: LinearGradient(
+                  colors: [AppColors.successLight, AppColors.success],
+                ),
               ),
               child: const Icon(Icons.check, size: 50, color: Colors.white),
             ),
             const SizedBox(height: 20),
             Text(
               _successTitle,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.fg),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               _successSub,
-              style: const TextStyle(fontSize: 14, color: AppColors.fgSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             GestureDetector(
               onTap: _successBtnAction,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 48,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(colors: [AppColors.accent, AppColors.orange]),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.warning],
+                  ),
                   boxShadow: [
-                    BoxShadow(color: AppColors.accent.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 4)),
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Text(
                   _successBtnText,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -1264,14 +1436,18 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       children: [
         Text(
           text,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
         ),
         if (required)
           const Padding(
             padding: EdgeInsets.only(left: 4),
             child: Text(
               '*',
-              style: TextStyle(fontSize: 10, color: AppColors.red),
+              style: TextStyle(fontSize: 10, color: AppColors.danger),
             ),
           ),
       ],
@@ -1294,7 +1470,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       onTap: readOnly ? onTap : null,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.bg,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border, width: 1.5),
         ),
@@ -1305,11 +1481,13 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          style: TextStyle(fontSize: fontSize, color: AppColors.fg),
+          style: TextStyle(fontSize: fontSize, color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: TextStyle(color: AppColors.muted, fontSize: fontSize),
-            contentPadding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            hintStyle: TextStyle(color: AppColors.textHint, fontSize: fontSize),
+            contentPadding:
+                padding ??
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             border: InputBorder.none,
             suffixIcon: suffix,
           ),
@@ -1322,15 +1500,23 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     required String text,
     required bool hasValue,
     required VoidCallback onTap,
+    bool disabled = false,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: AppColors.bg,
+          color: disabled
+              ? AppColors.border.withValues(alpha: 0.3)
+              : AppColors.background,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border, width: 1.5),
+          border: Border.all(
+            color: disabled
+                ? AppColors.border.withValues(alpha: 0.5)
+                : AppColors.border,
+            width: 1.5,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1339,23 +1525,21 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               text,
               style: TextStyle(
                 fontSize: 14,
-                color: hasValue ? AppColors.fg : AppColors.muted,
+                color: disabled
+                    ? AppColors.textSecondary
+                    : (hasValue ? AppColors.textPrimary : AppColors.textHint),
               ),
             ),
-            Icon(Icons.expand_more, size: 14, color: AppColors.muted),
+            Icon(
+              disabled ? Icons.lock_outline : Icons.expand_more,
+              size: 14,
+              color: AppColors.textHint,
+            ),
           ],
         ),
       ),
     );
   }
-}
-
-// ==================== 照片数据 ====================
-class _PhotoData {
-  final String emoji;
-  final Color color;
-
-  const _PhotoData({required this.emoji, required this.color});
 }
 
 // ==================== 表单卡片容器 ====================
@@ -1375,11 +1559,11 @@ class _FormCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -1391,11 +1575,15 @@ class _FormCard extends StatelessWidget {
           // 标题
           Row(
             children: [
-              Icon(icon, size: 16, color: AppColors.accentDark),
+              Icon(icon, size: 16, color: AppColors.primaryDark),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.fg),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -1424,9 +1612,11 @@ class _PickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
@@ -1437,17 +1627,24 @@ class _PickerSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.fg)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: AppColors.bg,
+                    color: AppColors.background,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.close, size: 14, color: AppColors.muted),
+                  child: Icon(Icons.close, size: 14, color: AppColors.textHint),
                 ),
               ),
             ],
@@ -1472,10 +1669,14 @@ class _PickerSheet extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFFFF3CC) : AppColors.bg,
+                      color: isSelected
+                          ? const Color(0xFFFFF3CC)
+                          : AppColors.background,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isSelected ? AppColors.accent : Colors.transparent,
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.transparent,
                         width: 1.5,
                       ),
                     ),
@@ -1489,7 +1690,9 @@ class _PickerSheet extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? AppColors.accentDark : AppColors.fgSecondary,
+                            color: isSelected
+                                ? AppColors.primaryDark
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -1500,6 +1703,223 @@ class _PickerSheet extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ==================== 收纳位置选择弹窗 ====================
+class _LocationPickerSheet extends StatelessWidget {
+  final List<StorageLocationNode> nodes;
+  final bool isLoading;
+  final StorageLocationNode? selectedNode;
+  final ValueChanged<StorageLocationNode> onPick;
+  final VoidCallback onClear;
+
+  const _LocationPickerSheet({
+    required this.nodes,
+    required this.isLoading,
+    required this.selectedNode,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final maxSheetHeight = screenHeight * 0.75;
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 顶部把手
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // 标题行
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '选择收纳位置',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(
+                    Icons.refresh,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                  tooltip: '清除选择',
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          // 列表
+          Flexible(
+            child: isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(
+                        color: AppColors.accentGold,
+                      ),
+                    ),
+                  )
+                : nodes.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Text(
+                        '暂无柜体或格子\n请先在收纳页面添加',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: nodes.length,
+                    itemBuilder: (ctx, i) {
+                      final node = nodes[i];
+                      final isSelected =
+                          selectedNode?.id == node.id &&
+                          selectedNode?.isSlot == node.isSlot;
+                      return _LocationTile(
+                        node: node,
+                        isSelected: isSelected,
+                        onTap: () => onPick(node),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationTile extends StatelessWidget {
+  final StorageLocationNode node;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LocationTile({
+    required this.node,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF8E7) : AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.accentGold : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // 层级图标
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: node.isSlot
+                    ? const Color(0xFFE8F0FE)
+                    : const Color(0xFFFFF3CC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(node.emoji, style: const TextStyle(fontSize: 18)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 路径信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    node.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    node.pathLabel,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // 选中标记 / 类型 chip
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: AppColors.accentGold,
+                size: 20,
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.border.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  node.isSlot ? '格子' : '柜体',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

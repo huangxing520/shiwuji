@@ -1,62 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/constants/app_dimensions.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
-
-// ─────────────────────────────────────────────
-// 数据模型（展示用）
-// ─────────────────────────────────────────────
-
-enum ItemStatus { safe, expiring, idle, underWarranty }
-
-class InventoryItem {
-  final String id;
-  final String emoji;
-  final String name;
-  final String category;
-  final String location;
-  final double price;
-  final ItemStatus status;
-  final String statusLabel;
-  final String categoryKey; // 用于分类过滤
-
-  const InventoryItem({
-    required this.id,
-    required this.emoji,
-    required this.name,
-    required this.category,
-    required this.location,
-    required this.price,
-    required this.status,
-    required this.statusLabel,
-    required this.categoryKey,
-  });
-}
+import 'package:shi_wu_ji/models/item.dart';
+import 'package:shi_wu_ji/models/inventory_item.dart';
+import 'package:shi_wu_ji/models/enums/item_status.dart';
+import 'package:shi_wu_ji/models/enums/sort_type.dart';
+import 'package:shi_wu_ji/providers/item_providers.dart';
+import 'package:shi_wu_ji/screen/inventory/sort_dropdown.dart';
+import 'package:shi_wu_ji/screen/inventory/filter_panel.dart';
 
 // ─────────────────────────────────────────────
 // 分类 & 排序 常量
 // ─────────────────────────────────────────────
-
-class _Category {
-  final String key;
-  final String label;
-  const _Category(this.key, this.label);
-}
-
-const _categories = <_Category>[
-  _Category('all', '全部'),
-  _Category('digital', '数码'),
-  _Category('appliance', '家电'),
-  _Category('skincare', '护肤'),
-  _Category('kitchen', '厨房'),
-  _Category('clothing', '衣物'),
-  _Category('books', '书籍'),
-  _Category('storage', '收纳'),
-];
-
-enum SortType { newest, oldest, priceHigh, priceLow, expiring }
 
 const _sortLabels = {
   SortType.newest: '新增时间',
@@ -74,148 +33,6 @@ const _sortFullLabels = {
   SortType.expiring: '到期时间（最近优先）',
 };
 
-// ─────────────────────────────────────────────
-// Mock 数据
-// ─────────────────────────────────────────────
-
-const _seedItems = <InventoryItem>[
-  InventoryItem(
-    id: '1',
-    emoji: '🧹',
-    name: '戴森V12吸尘器',
-    category: '家电',
-    location: '客厅收纳柜',
-    price: 3990,
-    status: ItemStatus.safe,
-    statusLabel: '安全',
-    categoryKey: 'appliance',
-  ),
-  InventoryItem(
-    id: '2',
-    emoji: '🎧',
-    name: 'AirPods Pro 2',
-    category: '数码',
-    location: '书房桌面',
-    price: 1899,
-    status: ItemStatus.underWarranty,
-    statusLabel: '在保',
-    categoryKey: 'digital',
-  ),
-  InventoryItem(
-    id: '3',
-    emoji: '💊',
-    name: '兰蔻小黑瓶精华',
-    category: '护肤',
-    location: '卧室梳妆台',
-    price: 1080,
-    status: ItemStatus.expiring,
-    statusLabel: '即将到期',
-    categoryKey: 'skincare',
-  ),
-  InventoryItem(
-    id: '4',
-    emoji: '📦',
-    name: '宜家思库布收纳箱×3',
-    category: '收纳',
-    location: '储物间',
-    price: 149,
-    status: ItemStatus.idle,
-    statusLabel: '闲置',
-    categoryKey: 'storage',
-  ),
-  InventoryItem(
-    id: '5',
-    emoji: '🎵',
-    name: '索尼WH-1000XM5',
-    category: '数码',
-    location: '书房',
-    price: 2499,
-    status: ItemStatus.underWarranty,
-    statusLabel: '在保',
-    categoryKey: 'digital',
-  ),
-  InventoryItem(
-    id: '6',
-    emoji: '🍚',
-    name: '美的电饭煲',
-    category: '厨房',
-    location: '料理台',
-    price: 399,
-    status: ItemStatus.safe,
-    statusLabel: '安全',
-    categoryKey: 'kitchen',
-  ),
-  InventoryItem(
-    id: '7',
-    emoji: '✨',
-    name: 'SK-II神仙水230ml',
-    category: '护肤',
-    location: '卧室梳妆台',
-    price: 1590,
-    status: ItemStatus.expiring,
-    statusLabel: '即将到期',
-    categoryKey: 'skincare',
-  ),
-  InventoryItem(
-    id: '8',
-    emoji: '🧱',
-    name: '乐高建筑系列·悉尼',
-    category: '书籍',
-    location: '书架第二层',
-    price: 599,
-    status: ItemStatus.idle,
-    statusLabel: '闲置',
-    categoryKey: 'books',
-  ),
-];
-
-const _moreItems = <InventoryItem>[
-  InventoryItem(
-    id: '9',
-    emoji: '👔',
-    name: '优衣库轻薄羽绒服',
-    category: '衣物',
-    location: '衣柜左侧',
-    price: 499,
-    status: ItemStatus.safe,
-    statusLabel: '安全',
-    categoryKey: 'clothing',
-  ),
-  InventoryItem(
-    id: '10',
-    emoji: '📱',
-    name: 'iPhone 15手机壳',
-    category: '数码',
-    location: '书房抽屉',
-    price: 89,
-    status: ItemStatus.idle,
-    statusLabel: '闲置',
-    categoryKey: 'digital',
-  ),
-  InventoryItem(
-    id: '11',
-    emoji: '🍳',
-    name: '不粘煎锅26cm',
-    category: '厨房',
-    location: '厨房吊柜',
-    price: 159,
-    status: ItemStatus.safe,
-    statusLabel: '安全',
-    categoryKey: 'kitchen',
-  ),
-  InventoryItem(
-    id: '12',
-    emoji: '📖',
-    name: '设计中的设计·原研哉',
-    category: '书籍',
-    location: '书架第一层',
-    price: 48,
-    status: ItemStatus.safe,
-    statusLabel: '安全',
-    categoryKey: 'books',
-  ),
-];
-
 // ═════════════════════════════════════════════
 // Inventory Page
 // ═════════════════════════════════════════════
@@ -227,11 +44,7 @@ class InventoryPage extends ConsumerStatefulWidget {
   ConsumerState<InventoryPage> createState() => _InventoryPageState();
 }
 
-class _InventoryPageState extends ConsumerState<InventoryPage>
-    with TickerProviderStateMixin {
-  // ── 数据 ──
-  List<InventoryItem> _allItems = [..._seedItems];
-
+class _InventoryPageState extends ConsumerState<InventoryPage> {
   // ── 状态 ──
   String _activeCategory = 'all';
   bool _isGridView = true;
@@ -240,8 +53,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
   String _searchQuery = '';
   SortType _sortType = SortType.newest;
   bool _sortDropdownOpen = false;
-  bool _allLoaded = false;
-  bool _isLoadingMore = false;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -256,56 +67,170 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
     super.dispose();
   }
 
-  // ───────────────────────────────────────────
-  // 过滤 & 排序逻辑
-  // ───────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    // 在 initState 中处理来自其他页面的 pending 筛选请求。
+    // IndexedStack 首次懒加载页面时，build 中 ref.watch 改 State + postFrame
+    // 清空 provider 的模式存在时序竞态，可能导致首次跳转筛选未应用。
+    // initState 一定先于 build 执行，此时 provider 值刚由来源页设置，可稳定读取。
+    String? pendingCat = ref.read(pendingCategoryProvider);
+    String? pendingStatus = ref.read(pendingStatusFilterProvider);
 
-  List<InventoryItem> get _filteredItems {
-    var items = _allItems.where((item) {
-      // 分类过滤
-      if (_activeCategory != 'all' && item.categoryKey != _activeCategory) {
-        return false;
-      }
-      // 搜索过滤
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        if (!item.name.toLowerCase().contains(q) &&
-            !item.category.toLowerCase().contains(q)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
-
-    // 排序
-    switch (_sortType) {
-      case SortType.newest:
-        items.sort((a, b) => b.id.compareTo(a.id));
-        break;
-      case SortType.oldest:
-        items.sort((a, b) => a.id.compareTo(b.id));
-        break;
-      case SortType.priceHigh:
-        items.sort((a, b) => b.price.compareTo(a.price));
-        break;
-      case SortType.priceLow:
-        items.sort((a, b) => a.price.compareTo(b.price));
-        break;
-      case SortType.expiring:
-        items.sort((a, b) {
-          if (a.status == ItemStatus.expiring &&
-              b.status != ItemStatus.expiring) {
-            return -1;
-          }
-          if (b.status == ItemStatus.expiring &&
-              a.status != ItemStatus.expiring) {
-            return 1;
-          }
-          return 0;
-        });
-        break;
+    if (pendingCat != null) {
+      _activeCategory = pendingCat;
     }
-    return items;
+    if (pendingStatus != null) {
+      const statusMap = {
+        'expiring': '即将到期',
+        'idle': '闲置',
+        'underWarranty': '在保',
+        'safe': '安全',
+      };
+      final label = statusMap[pendingStatus];
+      if (label != null) {
+        _selectedStatus = label;
+      }
+    }
+    // 统一在 postFrame 清空 pending provider，避免下次进入重复触发
+    if (pendingCat != null || pendingStatus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(pendingCategoryProvider.notifier).set(null);
+          ref.read(pendingStatusFilterProvider.notifier).set(null);
+        }
+      });
+    }
+  }
+
+  // ───────────────────────────────────────────
+  // Status helpers
+  // ───────────────────────────────────────────
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'safe':
+        return '安全';
+      case 'expiring':
+        return '即将到期';
+      case 'idle':
+        return '闲置';
+      case 'underWarranty':
+        return '在保';
+      default:
+        return '安全';
+    }
+  }
+
+  ItemStatus _toItemStatus(String status) {
+    switch (status) {
+      case 'safe':
+        return ItemStatus.safe;
+      case 'expiring':
+        return ItemStatus.expiring;
+      case 'idle':
+        return ItemStatus.idle;
+      case 'underWarranty':
+        return ItemStatus.underWarranty;
+      default:
+        return ItemStatus.safe;
+    }
+  }
+
+  // ───────────────────────────────────────────
+  // 过滤 & 排序逻辑 (from Riverpod provider)
+  // ───────────────────────────────────────────
+
+  /// 当前激活的筛选条件数量（用于筛选 chip 角标）
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedPriceRange != null && _selectedPriceRange != '不限') count++;
+    if (_selectedLocation != null && _selectedLocation != '全部') count++;
+    if (_selectedStatus != null && _selectedStatus != '全部') count++;
+    return count;
+  }
+
+  List<Item> get _filteredItems {
+    final allItemsAsync = ref.watch(itemsProvider);
+    return allItemsAsync.maybeWhen(
+      data: (allItems) {
+        var filtered = allItems;
+        if (_activeCategory != 'all') {
+          filtered = filtered
+              .where((i) => i.categoryKey == _activeCategory)
+              .toList();
+        }
+        if (_searchQuery.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (i) =>
+                    i.name.contains(_searchQuery) ||
+                    i.category.contains(_searchQuery) ||
+                    i.location.contains(_searchQuery),
+              )
+              .toList();
+        }
+        // 价格区间筛选
+        if (_selectedPriceRange != null && _selectedPriceRange != '不限') {
+          filtered = filtered.where((i) {
+            switch (_selectedPriceRange!) {
+              case '¥0–100':
+                return i.price >= 0 && i.price <= 100;
+              case '¥100–500':
+                return i.price > 100 && i.price <= 500;
+              case '¥500–2000':
+                return i.price > 500 && i.price <= 2000;
+              case '¥2000以上':
+                return i.price > 2000;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+        // 收纳位置筛选（包含匹配，如「客厅」匹配「客厅收纳柜」）
+        if (_selectedLocation != null && _selectedLocation != '全部') {
+          filtered = filtered
+              .where((i) => i.location.contains(_selectedLocation!))
+              .toList();
+        }
+        // 物品状态筛选
+        if (_selectedStatus != null && _selectedStatus != '全部') {
+          const statusKey = {
+            '安全': 'safe',
+            '在保': 'underWarranty',
+            '即将到期': 'expiring',
+            '闲置': 'idle',
+          };
+          final key = statusKey[_selectedStatus!];
+          if (key != null) {
+            filtered = filtered.where((i) => i.status == key).toList();
+          }
+        }
+        switch (_sortType) {
+          case SortType.newest:
+            filtered.sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
+            break;
+          case SortType.oldest:
+            filtered.sort((a, b) => a.purchaseDate.compareTo(b.purchaseDate));
+            break;
+          case SortType.priceHigh:
+            filtered.sort((a, b) => b.price.compareTo(a.price));
+            break;
+          case SortType.priceLow:
+            filtered.sort((a, b) => a.price.compareTo(b.price));
+            break;
+          case SortType.expiring:
+            filtered.sort(
+              (a, b) => a.daysUntilWarrantyExpiry.compareTo(
+                b.daysUntilWarrantyExpiry,
+              ),
+            );
+            break;
+        }
+        return filtered;
+      },
+      orElse: () => [],
+    );
   }
 
   // ───────────────────────────────────────────
@@ -325,10 +250,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
       _batchMode = !_batchMode;
       if (!_batchMode) _selectedIds.clear();
     });
-    ToastUtils.show(
-      context,
-      _batchMode ? '已进入批量管理模式' : '退出批量管理模式',
-    );
+    ToastUtils.show(context, _batchMode ? '已进入批量管理模式' : '退出批量管理模式');
   }
 
   void _toggleCheck(String id) {
@@ -341,12 +263,12 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
     });
   }
 
-  void _onItemTap(InventoryItem item) {
+  void _onItemTap(Item item) {
     if (_batchMode) {
       _toggleCheck(item.id);
       return;
     }
-    ToastUtils.show(context, '查看「${item.name}」详情');
+    context.push('/detail/${item.id}');
   }
 
   void _selectSort(SortType type) {
@@ -358,37 +280,8 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
   }
 
   Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) {
-      setState(() {});
-      ToastUtils.show(context, '数据已刷新 🎉');
-    }
-  }
-
-  void _loadMore() async {
-    if (_allLoaded || _isLoadingMore) return;
-    setState(() => _isLoadingMore = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() {
-        _allItems = [..._allItems, ..._moreItems];
-        _allLoaded = true;
-        _isLoadingMore = false;
-      });
-    }
-  }
-
-  void _applyFilters() {
-    Navigator.of(context).pop(); // close bottom sheet
-    ToastUtils.show(context, '已应用筛选条件');
-  }
-
-  void _resetFilters() {
-    setState(() {
-      _selectedPriceRange = null;
-      _selectedLocation = null;
-      _selectedStatus = null;
-    });
+    ref.invalidate(itemsProvider);
+    await ref.read(itemsProvider.future);
   }
 
   // ───────────────────────────────────────────
@@ -397,6 +290,40 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
 
   @override
   Widget build(BuildContext context) {
+    // 用 watch 监听待选分类：IndexedStack 切换分支不会重建已存在的页面 State，
+    // 必须用 watch 让 provider 变化时强制 rebuild，才能读到其他页面设置的值。
+    final pending = ref.watch(pendingCategoryProvider);
+    if (pending != null) {
+      if (pending != _activeCategory) {
+        _activeCategory = pending;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(pendingCategoryProvider.notifier).set(null);
+        }
+      });
+    }
+
+    // 监听来自首页的状态筛选请求
+    final pendingStatus = ref.watch(pendingStatusFilterProvider);
+    if (pendingStatus != null) {
+      const statusMap = {
+        'expiring': '即将到期',
+        'idle': '闲置',
+        'underWarranty': '在保',
+        'safe': '安全',
+      };
+      final label = statusMap[pendingStatus];
+      if (label != null && _selectedStatus != label) {
+        _selectedStatus = label;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(pendingStatusFilterProvider.notifier).set(null);
+        }
+      });
+    }
+
     final items = _filteredItems;
 
     return Scaffold(
@@ -419,42 +346,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
                     _buildCategoryTabs(),
                     const SizedBox(height: 12),
                     _buildFilterBar(),
-                    if (_sortDropdownOpen) _buildSortDropdown(),
-                    Expanded(
-                      child: RefreshIndicator(
-                        color: AppColors.primary,
-                        onRefresh: _onRefresh,
-                        child: CustomScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          slivers: [
-                            // 结果计数
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  AppDimensions.pageMarginHorizontal,
-                                  4,
-                                  AppDimensions.pageMarginHorizontal,
-                                  10,
-                                ),
-                                child: _buildResultCount(items.length),
-                              ),
-                            ),
-                            // 列表内容
-                            if (_isGridView)
-                              _buildGridSliver(items)
-                            else
-                              _buildListSliver(items),
-                            // 加载更多
-                            SliverToBoxAdapter(
-                              child: _buildLoadMore(),
-                            ),
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 80),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildListArea(items)),
                   ],
                 ),
                 // 批量操作栏
@@ -473,6 +365,61 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
     );
   }
 
+  // ─── List Area (排序下拉作为浮层，不影响列表布局) ──
+
+  Widget _buildListArea(List<Item> items) {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _onRefresh,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // 结果计数
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimensions.pageMarginHorizontal,
+                    4,
+                    AppDimensions.pageMarginHorizontal,
+                    10,
+                  ),
+                  child: _buildResultCount(items.length),
+                ),
+              ),
+              // 列表内容
+              if (_isGridView)
+                _buildGridSliver(items)
+              else
+                _buildListSliver(items),
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
+          ),
+        ),
+        // 排序下拉浮层：叠在列表之上，不挤压下方内容
+        if (_sortDropdownOpen) ...[
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _sortDropdownOpen = false),
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            left: 0,
+            right: 0,
+            child: SortDropdown(
+              currentSort: _sortType,
+              onSortSelected: _selectSort,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   // ─── Top Bar ───────────────────────────────
 
   Widget _buildTopBar() {
@@ -482,12 +429,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
       ),
       child: Row(
         children: [
-          // 返回按钮
-          _buildIconButton(
-            icon: Icons.chevron_left,
-            onTap: () => ToastUtils.show(context, '返回首页'),
-          ),
-          const SizedBox(width: 10),
           // 搜索框
           Expanded(
             child: Container(
@@ -586,10 +527,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.pageMarginHorizontal,
         ),
-        itemCount: _categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemCount: Category.all.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final cat = _categories[index];
+          final cat = Category.all[index];
           final isActive = _activeCategory == cat.key;
           return GestureDetector(
             onTap: () => _onCategoryChanged(cat.key),
@@ -658,8 +599,8 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
           const SizedBox(width: 6),
           // 筛选 chip
           _buildFilterChip(
-            label: '筛选',
-            isActive: false,
+            label: _activeFilterCount > 0 ? '筛选·$_activeFilterCount' : '筛选',
+            isActive: _activeFilterCount > 0,
             showArrow: false,
             icon: Icons.tune,
             onTap: () => _showFilterPanel(),
@@ -703,15 +644,21 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isActive ? AppColors.accentGold : AppColors.textSecondary,
+                color: isActive
+                    ? AppColors.accentGold
+                    : AppColors.textSecondary,
               ),
             ),
             if (showArrow) ...[
               const SizedBox(width: 4),
               Icon(
-                _sortDropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                _sortDropdownOpen
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
                 size: 12,
-                color: isActive ? AppColors.accentGold : AppColors.textSecondary,
+                color: isActive
+                    ? AppColors.accentGold
+                    : AppColors.textSecondary,
               ),
             ],
           ],
@@ -765,74 +712,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
     );
   }
 
-  // ─── Sort Dropdown ─────────────────────────
-
-  Widget _buildSortDropdown() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.pageMarginHorizontal,
-        4,
-        AppDimensions.pageMarginHorizontal,
-        0,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(AppDimensions.borderRadiusExtraLarge),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.14),
-              blurRadius: 32,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: SortType.values.map((type) {
-              final isActive = _sortType == type;
-              return GestureDetector(
-                onTap: () => _selectSort(type),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _sortFullLabels[type]!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                          color: isActive
-                              ? AppColors.accentGold
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                      if (isActive)
-                        const Icon(
-                          Icons.check,
-                          size: 18,
-                          color: AppColors.accentGold,
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ─── Result Count ──────────────────────────
 
   Widget _buildResultCount(int count) {
@@ -860,7 +739,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
 
   // ─── Grid View ─────────────────────────────
 
-  Widget _buildGridSliver(List<InventoryItem> items) {
+  Widget _buildGridSliver(List<Item> items) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.pageMarginHorizontal,
@@ -872,19 +751,17 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
           crossAxisSpacing: 12,
           childAspectRatio: 0.78,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final item = items[index];
-            return _buildGridCard(item, index);
-          },
-          childCount: items.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final item = items[index];
+          return _buildGridCard(item, index);
+        }, childCount: items.length),
       ),
     );
   }
 
-  Widget _buildGridCard(InventoryItem item, int index) {
+  Widget _buildGridCard(Item item, int index) {
     final isSelected = _selectedIds.contains(item.id);
+    final emoji = item.emoji.isNotEmpty ? item.emoji : '📦';
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 400 + index * 50),
@@ -903,7 +780,9 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusXLarge),
+            borderRadius: BorderRadius.circular(
+              AppDimensions.borderRadiusXLarge,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.08),
@@ -927,7 +806,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
                       color: AppColors.accentLightBg,
                       child: Center(
                         child: Text(
-                          item.emoji,
+                          emoji,
                           style: const TextStyle(fontSize: 44),
                         ),
                       ),
@@ -1014,28 +893,26 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
 
   // ─── List View ─────────────────────────────
 
-  Widget _buildListSliver(List<InventoryItem> items) {
+  Widget _buildListSliver(List<Item> items) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.pageMarginHorizontal,
       ),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final item = items[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildListCard(item, index),
-            );
-          },
-          childCount: items.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final item = items[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildListCard(item, index),
+          );
+        }, childCount: items.length),
       ),
     );
   }
 
-  Widget _buildListCard(InventoryItem item, int index) {
+  Widget _buildListCard(Item item, int index) {
     final isSelected = _selectedIds.contains(item.id);
+    final emoji = item.emoji.isNotEmpty ? item.emoji : '📦';
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 350 + index * 50),
@@ -1052,7 +929,9 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusExtraLarge),
+            borderRadius: BorderRadius.circular(
+              AppDimensions.borderRadiusExtraLarge,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.textPrimary.withValues(alpha: 0.06),
@@ -1075,10 +954,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
-                      child: Text(
-                        item.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
+                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
                     ),
                   ),
                   if (_batchMode)
@@ -1171,10 +1047,11 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
 
   // ─── 通用组件 ──────────────────────────────
 
-  Widget _buildStatusBadge(InventoryItem item, {bool isSmall = false}) {
+  Widget _buildStatusBadge(Item item, {bool isSmall = false}) {
+    final itemStatus = _toItemStatus(item.status);
     Color bgColor;
     Color textColor;
-    switch (item.status) {
+    switch (itemStatus) {
       case ItemStatus.expiring:
         bgColor = AppColors.dangerLight;
         textColor = AppColors.danger;
@@ -1202,7 +1079,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
         borderRadius: BorderRadius.circular(isSmall ? 10 : 12),
       ),
       child: Text(
-        item.statusLabel,
+        _statusLabel(item.status),
         style: TextStyle(
           fontSize: isSmall ? 10 : 10,
           fontWeight: FontWeight.w700,
@@ -1239,66 +1116,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
           ),
         ),
       ],
-    );
-  }
-
-  // ─── Load More ─────────────────────────────
-
-  Widget _buildLoadMore() {
-    if (_allLoaded) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: Text(
-            '已全部加载',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textHint,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      );
-    }
-    return GestureDetector(
-      onTap: _loadMore,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isLoadingMore) ...[
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  '加载中…',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textHint,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ] else
-                const Text(
-                  '上拉加载更多',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textHint,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1345,7 +1162,11 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
             children: [
               _buildBatchBtn('移动', AppColors.infoLight, AppColors.info),
               const SizedBox(width: 8),
-              _buildBatchBtn('导出', AppColors.successLight, AppColors.statusUsing),
+              _buildBatchBtn(
+                '导出',
+                AppColors.successLight,
+                AppColors.statusUsing,
+              ),
               const SizedBox(width: 8),
               _buildBatchBtn('删除', AppColors.dangerLight, AppColors.danger),
             ],
@@ -1382,166 +1203,26 @@ class _InventoryPageState extends ConsumerState<InventoryPage>
   // ─── Filter Panel (Bottom Sheet) ───────────
 
   void _showFilterPanel() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => _buildFilterSheet(ctx),
-    );
-  }
-
-  Widget _buildFilterSheet(BuildContext ctx) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppDimensions.borderRadiusXLarge),
-          topRight: Radius.circular(AppDimensions.borderRadiusXLarge),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头部
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '筛选条件',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _resetFilters,
-                  child: const Text(
-                    '重置',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.accentGold,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 价格区间
-            _buildFilterSection(
-              label: '价格区间',
-              options: ['不限', '¥0–100', '¥100–500', '¥500–2000', '¥2000以上'],
-              selected: _selectedPriceRange,
-              onSelect: (v) => setState(() => _selectedPriceRange = v),
-            ),
-            const SizedBox(height: 16),
-            // 收纳位置
-            _buildFilterSection(
-              label: '收纳位置',
-              options: ['全部', '客厅', '卧室', '书房', '厨房', '储物间'],
-              selected: _selectedLocation,
-              onSelect: (v) => setState(() => _selectedLocation = v),
-            ),
-            const SizedBox(height: 16),
-            // 物品状态
-            _buildFilterSection(
-              label: '物品状态',
-              options: ['全部', '正常使用', '闲置', '即将到期', '已借出'],
-              selected: _selectedStatus,
-              onSelect: (v) => setState(() => _selectedStatus = v),
-            ),
-            const SizedBox(height: 8),
-            // 确认按钮
-            GestureDetector(
-              onTap: _applyFilters,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.primary, AppColors.warning],
-                  ),
-                  borderRadius: BorderRadius.circular(
-                    AppDimensions.borderRadiusExtraLarge,
-                  ),
-                ),
-                child: const Center(
-                  child: Text(
-                    '确认筛选',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterSection({
-    required String label,
-    required List<String> options,
-    required String? selected,
-    required ValueChanged<String> onSelect,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((opt) {
-            final isSelected = selected == opt;
-            return GestureDetector(
-              onTap: () => onSelect(opt),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.accentLightBg : AppColors.background,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.border,
-                    width: 1.5,
-                  ),
-                ),
-                child: Text(
-                  opt,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? AppColors.accentGold
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+    FilterPanel.show(
+      context,
+      initialPriceRange: _selectedPriceRange,
+      initialLocation: _selectedLocation,
+      initialStatus: _selectedStatus,
+      onApply: (priceRange, location, status) {
+        setState(() {
+          _selectedPriceRange = priceRange;
+          _selectedLocation = location;
+          _selectedStatus = status;
+        });
+        ToastUtils.show(context, '已应用筛选条件');
+      },
+      onReset: () {
+        setState(() {
+          _selectedPriceRange = null;
+          _selectedLocation = null;
+          _selectedStatus = null;
+        });
+      },
     );
   }
 }

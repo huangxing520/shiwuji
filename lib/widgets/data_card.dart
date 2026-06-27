@@ -109,7 +109,7 @@ class _DataCardState extends State<DataCard>
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: widget.decoColor.withOpacity(0.15),
+                  color: widget.decoColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -151,7 +151,7 @@ class _DataCardState extends State<DataCard>
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: widget.color.withOpacity(0.7),
+                            color: widget.color.withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -172,7 +172,7 @@ class _DataCardState extends State<DataCard>
                     decoration: BoxDecoration(
                       color: widget.trendUp
                           ? AppColors.tagNewBg
-                          : AppColors.danger.withOpacity(0.15),
+                          : AppColors.danger.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-
-enum TabType { home, inventory, stats, me }
+import '../models/enums/tab_type.dart';
 
 class BottomNavBar extends StatelessWidget {
   final TabType currentTab;

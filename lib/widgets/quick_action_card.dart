@@ -108,7 +108,7 @@ class _QuickActionCardState extends State<QuickActionCard>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.startColor.withOpacity(0.3),
+                      color: widget.startColor.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

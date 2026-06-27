@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-
-enum PendingCardType { expiring, returning, restocking }
+import '../models/enums/pending_card_type.dart';
+import '../models/enums/item_tag_type.dart';
 
 class PendingCard extends StatelessWidget {
   final String title;
@@ -22,11 +22,11 @@ class PendingCard extends StatelessWidget {
   Color _getIconBgColor() {
     switch (type) {
       case PendingCardType.expiring:
-        return AppColors.danger.withOpacity(0.15);
+        return AppColors.danger.withValues(alpha: 0.15);
       case PendingCardType.returning:
-        return AppColors.info.withOpacity(0.15);
+        return AppColors.info.withValues(alpha: 0.15);
       case PendingCardType.restocking:
-        return AppColors.warning.withOpacity(0.15);
+        return AppColors.warning.withValues(alpha: 0.15);
     }
   }
 
@@ -74,7 +74,7 @@ class PendingCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimary.withOpacity(0.06),
+              color: AppColors.textPrimary.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -134,8 +134,6 @@ class PendingCard extends StatelessWidget {
   }
 }
 
-enum ItemTagType { newItem, urgent, normal }
-
 class RecentItemCard extends StatelessWidget {
   final String emoji;
   final String name;
@@ -168,9 +166,9 @@ class RecentItemCard extends StatelessWidget {
       case ItemTagType.newItem:
         return AppColors.tagNewBg;
       case ItemTagType.urgent:
-        return AppColors.danger.withOpacity(0.15);
+        return AppColors.danger.withValues(alpha: 0.15);
       case ItemTagType.normal:
-        return AppColors.info.withOpacity(0.15);
+        return AppColors.info.withValues(alpha: 0.15);
     }
   }
 
@@ -196,7 +194,7 @@ class RecentItemCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimary.withOpacity(0.06),
+              color: AppColors.textPrimary.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),

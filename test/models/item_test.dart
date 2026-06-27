@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wupin/models/item.dart';
+import 'package:shi_wu_ji/models/item.dart';
 
 void main() {
   group('Item', () {
@@ -13,24 +13,27 @@ void main() {
 
     test('Item.create uses default values', () {
       final item = Item.create(name: 'Test', price: 100);
-      expect(item.category, 'Uncategorized');
-      expect(item.location, 'Unknown');
+      expect(item.category, '未分类');
+      expect(item.location, '未知');
       expect(item.warrantyDays, 365);
+      expect(item.emoji, '');
+      expect(item.status, 'safe');
+      expect(item.categoryKey, '');
     });
 
     test('Item.create accepts custom values', () {
       final item = Item.create(
-        name: 'Laptop',
+        name: '笔记本电脑',
         price: 9999,
-        category: 'Electronics',
-        location: 'Office',
+        category: '电子产品',
+        location: '办公室',
         purchaseDate: fixedDate,
         warrantyDays: 730,
       );
-      expect(item.name, 'Laptop');
+      expect(item.name, '笔记本电脑');
       expect(item.price, 9999);
-      expect(item.category, 'Electronics');
-      expect(item.location, 'Office');
+      expect(item.category, '电子产品');
+      expect(item.location, '办公室');
       expect(item.purchaseDate, fixedDate);
       expect(item.warrantyDays, 730);
     });
