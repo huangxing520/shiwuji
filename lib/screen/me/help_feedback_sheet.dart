@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
 /// 帮助反馈底部弹窗
 class HelpFeedbackSheet extends StatelessWidget {
@@ -68,9 +69,7 @@ class HelpFeedbackSheet extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Center(
-            child: Text('📦', style: TextStyle(fontSize: 32)),
-          ),
+          child: Center(child: EmojiText(emoji: '📦', fontSize: 32)),
         ),
         const SizedBox(height: 12),
         const Text(

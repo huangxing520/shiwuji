@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/emoji_text.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/toast_utils.dart';
 import '../../models/storage.dart';
-import '../../models/item.dart';
 import '../../providers/storage_providers.dart';
-import '../../providers/item_providers.dart';
 import 'stats_banner.dart';
 import 'add_space_modal.dart';
+import 'edit_space_modal.dart';
 import 'items_preview_modal.dart';
 
 /// 收纳位置管理页面
@@ -34,7 +34,14 @@ class _StoragePageState extends ConsumerState<StoragePage> {
   bool _showItemsModal = false;
   String _itemsModalTitle = '';
   String _itemsModalSlotId = '';
-  final Set<String> _selectedItemIds = {};
+  final Set<int> _selectedItemIds = {}; // 选中物品的数据库 id
+
+  // 编辑模态框状态
+  bool _showEditModal = false;
+  _EditTarget? _editTarget;
+
+  // 批量操作进行中
+  bool _batchProcessing = false;
 
   // ========== 导航 ==========
   void _navigateLevel(int level) {
@@ -90,7 +97,8 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     required String name,
     required String icon,
   }) {
-    final id = '${level}_${DateTime.now().millisecondsSinceEpoch}';
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final id = '${level}_$ts';
     const color = AppColors.primary;
 
     switch (level) {
@@ -98,6 +106,28 @@ class _StoragePageState extends ConsumerState<StoragePage> {
         ref
             .read(roomActionsProvider.notifier)
             .addRoom(id: id, name: name, emoji: icon, color: color);
+        // 自动创建默认柜体
+        final cabinetId = 'cabinet_${ts}_default';
+        ref
+            .read(cabinetActionsProvider.notifier)
+            .addCabinet(
+              id: cabinetId,
+              name: '默认柜体',
+              emoji: '🗄️',
+              color: color,
+              roomId: id,
+            );
+        // 自动创建默认格子区域
+        final slotId = 'slot_${ts}_default';
+        ref
+            .read(slotActionsProvider.notifier)
+            .addSlot(
+              id: slotId,
+              name: '默认区域',
+              emoji: '📦',
+              color: color,
+              cabinetId: cabinetId,
+            );
         break;
       case 'cabinet':
         if (parentId.isNotEmpty) {
@@ -109,6 +139,17 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 emoji: icon,
                 color: color,
                 roomId: parentId,
+              );
+          // 自动创建默认格子区域
+          final slotId = 'slot_${ts}_default';
+          ref
+              .read(slotActionsProvider.notifier)
+              .addSlot(
+                id: slotId,
+                name: '默认区域',
+                emoji: '📦',
+                color: color,
+                cabinetId: id,
               );
         }
         break;
@@ -146,50 +187,331 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     });
   }
 
-  /// 长按格子 → 选择物品迁移到此格子（联动 Item.cabinetId/slotId）
-  void _openSlotMovePicker(BuildContext context, Slot slot) {
-    final cabinetId = _currentCabinetId;
-    final cabinetName = _currentCabinetName;
-    final roomName = _currentRoomName;
-    if (cabinetId == null) {
-      ToastUtils.show(context, '缺少柜体上下文，无法迁移');
-      return;
-    }
-    final pathLabel = '$roomName / $cabinetName / ${slot.name}';
-
+  /// 长按房间 → 显示编辑/删除选项
+  void _showRoomActionSheet(Room room) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Consumer(
-          builder: (ctx, ref, _) {
-            final itemsAsync = ref.watch(itemsProvider);
-            final items = itemsAsync.value ?? const <Item>[];
-            return _SlotMoveSheet(
-              slot: slot,
-              pathLabel: pathLabel,
-              items: items,
-              onAssign: (item) async {
-                await ref
-                    .read(itemsProvider.notifier)
-                    .updateLocation(
-                      id: item.id,
-                      cabinetId: cabinetId,
-                      slotId: slot.id,
-                      locationLabel: pathLabel,
-                    );
-                if (ctx.mounted) Navigator.pop(ctx);
-                ToastUtils.show(context, '「${item.name}」已收纳到 ${slot.name}');
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFFE5A500),
+              ),
+              title: const Text('编辑房间'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openEditModal(
+                  _EditTarget(
+                    kind: _EditKind.room,
+                    id: room.id,
+                    name: room.name,
+                    emoji: room.emoji,
+                  ),
+                );
               },
-            );
-          },
-        );
-      },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+              ),
+              title: const Text('删除房间'),
+              subtitle: Text(
+                '将一并删除其下所有柜体、格子和物品',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDeleteRoom(room);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 
-  void _toggleItemSelection(String itemId) {
+  /// 长按柜体 → 显示编辑/删除选项
+  void _showCabinetActionSheet(Cabinet cabinet) {
+    final roomId = _currentRoomId;
+    if (roomId == null) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFFE5A500),
+              ),
+              title: const Text('编辑柜体'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openEditModal(
+                  _EditTarget(
+                    kind: _EditKind.cabinet,
+                    id: cabinet.id,
+                    parentId: roomId,
+                    name: cabinet.name,
+                    emoji: cabinet.emoji,
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+              ),
+              title: const Text('删除柜体'),
+              subtitle: Text(
+                '将一并删除其下所有格子和物品',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDeleteCabinet(cabinet, roomId);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 长按格子 → 显示编辑/删除选项
+  void _showSlotActionSheet(Slot slot) {
+    final cabinetId = _currentCabinetId;
+    if (cabinetId == null) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFFE5A500),
+              ),
+              title: const Text('编辑格子'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openEditModal(
+                  _EditTarget(
+                    kind: _EditKind.slot,
+                    id: slot.id,
+                    parentId: cabinetId,
+                    name: slot.name,
+                    emoji: slot.emoji,
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+              ),
+              title: const Text('删除格子'),
+              subtitle: Text(
+                '将一并删除格子内的所有物品',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDeleteSlot(slot, cabinetId);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ========== 编辑模态框 ==========
+  void _openEditModal(_EditTarget target) {
+    setState(() {
+      _editTarget = target;
+      _showEditModal = true;
+    });
+  }
+
+  void _closeEditModal() {
+    setState(() {
+      _showEditModal = false;
+      _editTarget = null;
+    });
+  }
+
+  void _onEditConfirm({required String name, required String icon}) {
+    final t = _editTarget;
+    if (t == null) return;
+    switch (t.kind) {
+      case _EditKind.room:
+        ref
+            .read(roomActionsProvider.notifier)
+            .updateRoom(id: t.id, name: name, emoji: icon);
+        break;
+      case _EditKind.cabinet:
+        ref
+            .read(cabinetActionsProvider.notifier)
+            .updateCabinet(
+              id: t.id,
+              roomId: t.parentId!,
+              name: name,
+              emoji: icon,
+            );
+        break;
+      case _EditKind.slot:
+        ref
+            .read(slotActionsProvider.notifier)
+            .updateSlot(
+              id: t.id,
+              cabinetId: t.parentId!,
+              name: name,
+              emoji: icon,
+            );
+        break;
+    }
+    ToastUtils.show(context, '「$name」已更新');
+    _closeEditModal();
+  }
+
+  // ========== 删除确认 ==========
+  void _confirmDeleteRoom(Room room) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除房间'),
+        content: Text('确定删除「${room.name}」？将一并删除其下所有柜体、格子和物品，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(roomActionsProvider.notifier).deleteRoom(room.id);
+              ToastUtils.show(context, '「${room.name}」已删除');
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteCabinet(Cabinet cabinet, String roomId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除柜体'),
+        content: Text('确定删除「${cabinet.name}」？将一并删除其下所有格子和物品，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref
+                  .read(cabinetActionsProvider.notifier)
+                  .deleteCabinet(cabinet.id, roomId);
+              ToastUtils.show(context, '「${cabinet.name}」已删除');
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteSlot(Slot slot, String cabinetId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除格子'),
+        content: Text('确定删除「${slot.name}」？将一并删除格子内的所有物品，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref
+                  .read(slotActionsProvider.notifier)
+                  .deleteSlot(slot.id, cabinetId);
+              ToastUtils.show(context, '「${slot.name}」已删除');
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleItemSelection(int itemId) {
     setState(() {
       if (_selectedItemIds.contains(itemId)) {
         _selectedItemIds.remove(itemId);
@@ -199,9 +521,219 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     });
   }
 
-  void _batchMigrate() {
-    ToastUtils.show(context, '已迁移${_selectedItemIds.length}件物品');
-    _closeItemsModal();
+  // ========== 批量迁移 ==========
+  Future<void> _batchMigrate() async {
+    if (_selectedItemIds.isEmpty) return;
+    final fromSlotId = _itemsModalSlotId;
+    if (fromSlotId.isEmpty) return;
+
+    // 弹出目标格子选择器
+    final target = await showModalBottomSheet<StorageLocationNode>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _buildMoveTargetPicker(ctx),
+    );
+    if (!mounted) return;
+    if (target == null) return;
+    if (!target.isSlot) {
+      ToastUtils.show(context, '请选择目标格子（不可直接选柜体）');
+      return;
+    }
+    if (target.id == fromSlotId) {
+      ToastUtils.show(context, '目标格子与源格子相同');
+      return;
+    }
+
+    setState(() => _batchProcessing = true);
+    try {
+      await ref
+          .read(spaceItemActionsProvider.notifier)
+          .migrateItems(_selectedItemIds.toList(), target.id);
+      if (mounted) {
+        ToastUtils.show(
+          context,
+          '已迁移 ${_selectedItemIds.length} 件物品到「${target.name}」',
+        );
+      }
+    } catch (e) {
+      if (mounted) ToastUtils.show(context, '迁移失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _batchProcessing = false;
+          _selectedItemIds.clear();
+        });
+        _closeItemsModal();
+      }
+    }
+  }
+
+  Widget _buildMoveTargetPicker(BuildContext ctx) {
+    return Consumer(
+      builder: (ctx, ref, _) {
+        final treeAsync = ref.watch(storageLocationTreeProvider);
+        final screenHeight = MediaQuery.sizeOf(ctx).height;
+        return treeAsync.when(
+          loading: () => Container(
+            height: screenHeight * 0.5,
+            color: Colors.white,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(),
+          ),
+          error: (e, _) => Container(
+            height: screenHeight * 0.5,
+            color: Colors.white,
+            alignment: Alignment.center,
+            child: Text('加载失败: $e'),
+          ),
+          data: (nodes) {
+            final slots = nodes.where((n) => n.isSlot).toList();
+            return Container(
+              constraints: BoxConstraints(maxHeight: screenHeight * 0.5),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '选择目标格子',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, color: AppColors.border),
+                  Flexible(
+                    child: slots.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(40),
+                              child: Text(
+                                '暂无可选格子',
+                                style: TextStyle(
+                                  color: AppColors.textHint,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: slots.length,
+                            itemBuilder: (ctx, i) {
+                              final node = slots[i];
+                              final isCurrent = node.id == _itemsModalSlotId;
+                              return ListTile(
+                                leading: EmojiText(
+                                  emoji: node.emoji,
+                                  fontSize: 22,
+                                ),
+                                title: Text(node.name),
+                                subtitle: Text(
+                                  node.pathLabel,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textHint,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: isCurrent
+                                    ? const Text(
+                                        '当前',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textHint,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.chevron_right,
+                                        color: AppColors.textHint,
+                                      ),
+                                onTap: isCurrent
+                                    ? null
+                                    : () => Navigator.pop(ctx, node),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ========== 批量删除 ==========
+  Future<void> _batchDelete() async {
+    if (_selectedItemIds.isEmpty) return;
+    final slotId = _itemsModalSlotId;
+    if (slotId.isEmpty) return;
+
+    // 确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('批量删除'),
+        content: Text('确定删除选中的 ${_selectedItemIds.length} 件物品？此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _batchProcessing = true);
+    try {
+      await ref
+          .read(spaceItemActionsProvider.notifier)
+          .deleteItems(_selectedItemIds.toList(), slotId);
+      if (mounted) {
+        ToastUtils.show(context, '已删除 ${_selectedItemIds.length} 件物品');
+      }
+    } catch (e) {
+      if (mounted) ToastUtils.show(context, '删除失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _batchProcessing = false;
+          _selectedItemIds.clear();
+        });
+        _closeItemsModal();
+      }
+    }
   }
 
   // ========== 构建UI ==========
@@ -231,7 +763,23 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 currentRoomId: _currentRoomId,
                 currentCabinetId: _currentCabinetId,
               ),
+            if (_showEditModal && _editTarget != null)
+              EditSpaceModal(
+                title: _editTarget!.title,
+                initialName: _editTarget!.name,
+                initialIcon: _editTarget!.emoji,
+                iconOptions: _editTarget!.iconOptions,
+                onClose: _closeEditModal,
+                onConfirm: _onEditConfirm,
+              ),
             if (_showItemsModal) _buildItemsModalFromProvider(),
+            if (_batchProcessing)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              ),
           ],
         ),
       ),
@@ -316,6 +864,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
         onClose: _closeItemsModal,
         onToggleItem: _toggleItemSelection,
         onBatchMigrate: _batchMigrate,
+        onBatchDelete: _batchDelete,
       ),
     );
   }
@@ -665,6 +1214,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 room: room,
                 delay: i * 0.08,
                 onTap: () => _enterRoom(room.id, room.name),
+                onLongPress: () => _showRoomActionSheet(room),
               ),
             );
           }).toList(),
@@ -709,9 +1259,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 slotCount: 0, // slot count is fetched separately
                 delay: i * 0.08,
                 onTap: () => _enterCabinet(cabinet.id, cabinet.name),
-                onEdit: () => ToastUtils.show(context, '编辑「${cabinet.name}」'),
-                onDelete: () =>
-                    ToastUtils.show(context, '删除「${cabinet.name}」？'),
+                onLongPress: () => _showCabinetActionSheet(cabinet),
               ),
             );
           }).toList(),
@@ -755,7 +1303,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 slot: slot,
                 delay: i * 0.08,
                 onTap: () => _openItemsModal(slot.name, slot.id),
-                onLongPress: () => _openSlotMovePicker(context, slot),
+                onLongPress: () => _showSlotActionSheet(slot),
               ),
             );
           }).toList(),
@@ -770,17 +1318,20 @@ class _RoomCardLarge extends StatelessWidget {
   final Room room;
   final double delay;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const _RoomCardLarge({
     required this.room,
     required this.delay,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 400),
@@ -820,12 +1371,7 @@ class _RoomCardLarge extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    Center(
-                      child: Text(
-                        room.emoji,
-                        style: const TextStyle(fontSize: 48),
-                      ),
-                    ),
+                    Center(child: EmojiText(emoji: room.emoji, fontSize: 48)),
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -968,9 +1514,6 @@ class _SpaceCard extends StatelessWidget {
   final List<SpaceItem> items;
   final double delay;
   final VoidCallback onTap;
-  final VoidCallback? onEdit;
-  final VoidCallback? onMove;
-  final VoidCallback? onDelete;
   final VoidCallback? onLongPress;
 
   const _SpaceCard({
@@ -980,9 +1523,6 @@ class _SpaceCard extends StatelessWidget {
     this.items = const [],
     required this.delay,
     required this.onTap,
-    this.onEdit,
-    this.onMove,
-    this.onDelete,
     this.onLongPress,
   });
 
@@ -1123,28 +1663,11 @@ class _SpaceCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // 操作按钮
-                    Row(
-                      children: [
-                        if (onEdit != null)
-                          _buildActionBtn(
-                            Icons.edit_outlined,
-                            const Color(0xFFE5A500),
-                            onEdit!,
-                          ),
-                        if (onMove != null)
-                          _buildActionBtn(
-                            Icons.autorenew,
-                            AppColors.info,
-                            onMove!,
-                          ),
-                        if (onDelete != null)
-                          _buildActionBtn(
-                            Icons.delete_outline,
-                            AppColors.danger,
-                            onDelete!,
-                          ),
-                      ],
+                    // 长按提示图标
+                    const Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: AppColors.textHint,
                     ),
                   ],
                 ),
@@ -1173,10 +1696,7 @@ class _SpaceCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    item.emoji,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
+                                  EmojiText(emoji: item.emoji, fontSize: 13),
                                   const SizedBox(width: 4),
                                   Text(
                                     item.name,
@@ -1218,22 +1738,6 @@ class _SpaceCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildActionBtn(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        margin: const EdgeInsets.only(left: 4),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 14, color: color),
-      ),
-    );
-  }
 }
 
 // ========== 面包屑数据类 ==========
@@ -1244,282 +1748,94 @@ class _BreadcrumbItem {
   const _BreadcrumbItem(this.label, this.onTap);
 }
 
-// ========== 长按格子迁移物品弹窗 ==========
-class _SlotMoveSheet extends StatefulWidget {
-  final Slot slot;
-  final String pathLabel;
-  final List<Item> items;
-  final Future<void> Function(Item item) onAssign;
+// ========== 编辑目标数据类 ==========
+enum _EditKind { room, cabinet, slot }
 
-  const _SlotMoveSheet({
-    required this.slot,
-    required this.pathLabel,
-    required this.items,
-    required this.onAssign,
+class _EditTarget {
+  final _EditKind kind;
+  final String id;
+  final String? parentId; // cabinet: roomId; slot: cabinetId
+  final String name;
+  final String emoji;
+
+  const _EditTarget({
+    required this.kind,
+    required this.id,
+    this.parentId,
+    required this.name,
+    required this.emoji,
   });
 
-  @override
-  State<_SlotMoveSheet> createState() => _SlotMoveSheetState();
-}
-
-class _SlotMoveSheetState extends State<_SlotMoveSheet> {
-  String _query = '';
-
-  List<Item> get _filtered {
-    final q = _query.trim();
-    final list = q.isEmpty
-        ? widget.items
-        : widget.items.where((i) => i.name.contains(q)).toList();
-    // 已在该格子的物品排前，再按名称
-    list.sort((a, b) {
-      final aHere = a.slotId == widget.slot.id;
-      final bHere = b.slotId == widget.slot.id;
-      if (aHere && !bHere) return -1;
-      if (!aHere && bHere) return 1;
-      return a.name.compareTo(b.name);
-    });
-    return list;
+  String get title {
+    switch (kind) {
+      case _EditKind.room:
+        return '编辑房间';
+      case _EditKind.cabinet:
+        return '编辑柜体';
+      case _EditKind.slot:
+        return '编辑格子';
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final maxSheetHeight = screenHeight * 0.8;
-
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxSheetHeight),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 把手
-          Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 4),
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          // 标题
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      widget.slot.emoji,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '收纳到「${widget.slot.name}」',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.pathLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textHint,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  '长按格子触发 · 选择一件物品收纳到此格',
-                  style: TextStyle(fontSize: 11, color: AppColors.textHint),
-                ),
-              ],
-            ),
-          ),
-          // 搜索框
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: '搜索物品名称',
-                hintStyle: const TextStyle(
-                  color: AppColors.textHint,
-                  fontSize: 13,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-                filled: true,
-                fillColor: AppColors.background,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.border),
-          // 列表
-          Flexible(
-            child: _filtered.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Text(
-                        '没有匹配的物品',
-                        style: TextStyle(
-                          color: AppColors.textHint,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _filtered.length,
-                    itemBuilder: (ctx, i) {
-                      final item = _filtered[i];
-                      final isHere = item.slotId == widget.slot.id;
-                      final isElsewhere = item.cabinetId != null && !isHere;
-                      return _MoveItemTile(
-                        item: item,
-                        isHere: isHere,
-                        isElsewhere: isElsewhere,
-                        onTap: () => widget.onAssign(item),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MoveItemTile extends StatelessWidget {
-  final Item item;
-  final bool isHere;
-  final bool isElsewhere;
-  final VoidCallback onTap;
-
-  const _MoveItemTile({
-    required this.item,
-    required this.isHere,
-    required this.isElsewhere,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: isHere ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: isHere
-              ? const Color(0xFFFFF8E7)
-              : (isElsewhere ? const Color(0xFFFFF3F0) : AppColors.background),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isHere ? AppColors.accentGold : AppColors.border,
-            width: isHere ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: Center(
-                child: Text(
-                  item.emoji.isNotEmpty ? item.emoji : '📦',
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isHere
-                        ? '已在当前格子'
-                        : (isElsewhere ? '原位置：${item.location}' : '未指定收纳位置'),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isHere
-                          ? AppColors.accentGold
-                          : (isElsewhere
-                                ? const Color(0xFFE57373)
-                                : AppColors.textHint),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            if (isHere)
-              const Icon(
-                Icons.check_circle,
-                color: AppColors.accentGold,
-                size: 20,
-              )
-            else if (isElsewhere)
-              const Icon(Icons.swap_horiz, color: Color(0xFFE57373), size: 18)
-            else
-              const Icon(
-                Icons.add_circle_outline,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
-          ],
-        ),
-      ),
-    );
+  List<String> get iconOptions {
+    switch (kind) {
+      case _EditKind.room:
+        return const [
+          '🛋️',
+          '🛏️',
+          '📚',
+          '🍳',
+          '🗄️',
+          '📺',
+          '👔',
+          '💄',
+          '💡',
+          '📦',
+          '🖥️',
+          '🔌',
+          '🔧',
+          '🧹',
+          '🚪',
+          '🧒',
+          '🌱',
+          '🚗',
+        ];
+      case _EditKind.cabinet:
+        return const [
+          '📦',
+          '🗄️',
+          '🚪',
+          '📺',
+          '🧱',
+          '📚',
+          '🪑',
+          '🛁',
+          '🪴',
+          '🧸',
+          '🍳',
+          '💡',
+          '🖼️',
+          '🧺',
+        ];
+      case _EditKind.slot:
+        return const [
+          '📦',
+          '📚',
+          '👗',
+          '👔',
+          '💄',
+          '💊',
+          '🧴',
+          '🔧',
+          '🔌',
+          '🔋',
+          '🎧',
+          '📷',
+          '🎮',
+          '🔑',
+          '📝',
+          '🧹',
+        ];
+    }
   }
 }

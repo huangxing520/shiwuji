@@ -139,6 +139,27 @@ class _MePageState extends ConsumerState<MePage> {
               ],
             ),
           ),
+          // 扫描按钮：调用 flutter_smart_scanner 识别物体
+          GestureDetector(
+            onTap: () => context.push('/scan'),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.document_scanner_outlined,
+                size: 22,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );

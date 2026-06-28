@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'emoji_text.dart';
 import '../models/enums/pending_card_type.dart';
 import '../models/enums/item_tag_type.dart';
 
@@ -136,6 +138,7 @@ class PendingCard extends StatelessWidget {
 
 class RecentItemCard extends StatelessWidget {
   final String emoji;
+  final String? photoPath;
   final String name;
   final String meta;
   final ItemTagType tagType;
@@ -147,6 +150,7 @@ class RecentItemCard extends StatelessWidget {
     required this.name,
     required this.meta,
     required this.tagType,
+    this.photoPath,
     this.onTap,
   });
 
@@ -158,6 +162,8 @@ class RecentItemCard extends StatelessWidget {
         return '即将到期';
       case ItemTagType.normal:
         return '在保';
+      case ItemTagType.expired:
+        return '已过保';
     }
   }
 
@@ -169,6 +175,8 @@ class RecentItemCard extends StatelessWidget {
         return AppColors.danger.withValues(alpha: 0.15);
       case ItemTagType.normal:
         return AppColors.info.withValues(alpha: 0.15);
+      case ItemTagType.expired:
+        return AppColors.warning.withValues(alpha: 0.15);
     }
   }
 
@@ -180,6 +188,8 @@ class RecentItemCard extends StatelessWidget {
         return AppColors.danger;
       case ItemTagType.normal:
         return AppColors.info;
+      case ItemTagType.expired:
+        return AppColors.warning;
     }
   }
 
@@ -209,9 +219,19 @@ class RecentItemCard extends StatelessWidget {
                 color: AppColors.accentLightBg,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 22)),
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: (photoPath != null && photoPath!.isNotEmpty)
+                  ? Image.file(
+                      File(photoPath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                      ),
+                    )
+                  : Center(child: EmojiText(emoji: emoji, fontSize: 22)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -229,10 +249,7 @@ class RecentItemCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     meta,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textHint,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.textHint),
                   ),
                 ],
               ),

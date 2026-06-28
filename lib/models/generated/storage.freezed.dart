@@ -855,7 +855,7 @@ as int,
 /// @nodoc
 mixin _$SpaceItem {
 
- String get emoji; String get name; String get meta;
+ int get id; String get emoji; String get name; String get meta;
 /// Create a copy of SpaceItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -868,16 +868,16 @@ $SpaceItemCopyWith<SpaceItem> get copyWith => _$SpaceItemCopyWithImpl<SpaceItem>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SpaceItem&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.name, name) || other.name == name)&&(identical(other.meta, meta) || other.meta == meta));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SpaceItem&&(identical(other.id, id) || other.id == id)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.name, name) || other.name == name)&&(identical(other.meta, meta) || other.meta == meta));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,emoji,name,meta);
+int get hashCode => Object.hash(runtimeType,id,emoji,name,meta);
 
 @override
 String toString() {
-  return 'SpaceItem(emoji: $emoji, name: $name, meta: $meta)';
+  return 'SpaceItem(id: $id, emoji: $emoji, name: $name, meta: $meta)';
 }
 
 
@@ -888,7 +888,7 @@ abstract mixin class $SpaceItemCopyWith<$Res>  {
   factory $SpaceItemCopyWith(SpaceItem value, $Res Function(SpaceItem) _then) = _$SpaceItemCopyWithImpl;
 @useResult
 $Res call({
- String emoji, String name, String meta
+ int id, String emoji, String name, String meta
 });
 
 
@@ -905,9 +905,10 @@ class _$SpaceItemCopyWithImpl<$Res>
 
 /// Create a copy of SpaceItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? emoji = null,Object? name = null,Object? meta = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? emoji = null,Object? name = null,Object? meta = null,}) {
   return _then(_self.copyWith(
-emoji: null == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,emoji: null == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,meta: null == meta ? _self.meta : meta // ignore: cast_nullable_to_non_nullable
 as String,
@@ -995,10 +996,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String emoji,  String name,  String meta)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String emoji,  String name,  String meta)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SpaceItem() when $default != null:
-return $default(_that.emoji,_that.name,_that.meta);case _:
+return $default(_that.id,_that.emoji,_that.name,_that.meta);case _:
   return orElse();
 
 }
@@ -1016,10 +1017,10 @@ return $default(_that.emoji,_that.name,_that.meta);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String emoji,  String name,  String meta)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String emoji,  String name,  String meta)  $default,) {final _that = this;
 switch (_that) {
 case _SpaceItem():
-return $default(_that.emoji,_that.name,_that.meta);case _:
+return $default(_that.id,_that.emoji,_that.name,_that.meta);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1036,10 +1037,10 @@ return $default(_that.emoji,_that.name,_that.meta);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String emoji,  String name,  String meta)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String emoji,  String name,  String meta)?  $default,) {final _that = this;
 switch (_that) {
 case _SpaceItem() when $default != null:
-return $default(_that.emoji,_that.name,_that.meta);case _:
+return $default(_that.id,_that.emoji,_that.name,_that.meta);case _:
   return null;
 
 }
@@ -1051,9 +1052,10 @@ return $default(_that.emoji,_that.name,_that.meta);case _:
 @JsonSerializable()
 
 class _SpaceItem implements SpaceItem {
-  const _SpaceItem({required this.emoji, required this.name, required this.meta});
+  const _SpaceItem({required this.id, required this.emoji, required this.name, required this.meta});
   factory _SpaceItem.fromJson(Map<String, dynamic> json) => _$SpaceItemFromJson(json);
 
+@override final  int id;
 @override final  String emoji;
 @override final  String name;
 @override final  String meta;
@@ -1071,16 +1073,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SpaceItem&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.name, name) || other.name == name)&&(identical(other.meta, meta) || other.meta == meta));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SpaceItem&&(identical(other.id, id) || other.id == id)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.name, name) || other.name == name)&&(identical(other.meta, meta) || other.meta == meta));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,emoji,name,meta);
+int get hashCode => Object.hash(runtimeType,id,emoji,name,meta);
 
 @override
 String toString() {
-  return 'SpaceItem(emoji: $emoji, name: $name, meta: $meta)';
+  return 'SpaceItem(id: $id, emoji: $emoji, name: $name, meta: $meta)';
 }
 
 
@@ -1091,7 +1093,7 @@ abstract mixin class _$SpaceItemCopyWith<$Res> implements $SpaceItemCopyWith<$Re
   factory _$SpaceItemCopyWith(_SpaceItem value, $Res Function(_SpaceItem) _then) = __$SpaceItemCopyWithImpl;
 @override @useResult
 $Res call({
- String emoji, String name, String meta
+ int id, String emoji, String name, String meta
 });
 
 
@@ -1108,9 +1110,10 @@ class __$SpaceItemCopyWithImpl<$Res>
 
 /// Create a copy of SpaceItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? emoji = null,Object? name = null,Object? meta = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? emoji = null,Object? name = null,Object? meta = null,}) {
   return _then(_SpaceItem(
-emoji: null == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,emoji: null == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,meta: null == meta ? _self.meta : meta // ignore: cast_nullable_to_non_nullable
 as String,

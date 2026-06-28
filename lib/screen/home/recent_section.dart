@@ -24,8 +24,11 @@ class RecentSection extends ConsumerWidget {
           ),
           child: Column(
             children: [
-              Icon(Icons.inventory_2_outlined,
-                  size: 36, color: AppColors.textHint.withValues(alpha: 0.5)),
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 36,
+                color: AppColors.textHint.withValues(alpha: 0.5),
+              ),
               const SizedBox(height: 8),
               Text(
                 '暂无物品记录',
@@ -49,6 +52,7 @@ class RecentSection extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: RecentItemCard(
               emoji: item.emoji.isNotEmpty ? item.emoji : '\u{1F4E6}',
+              photoPath: item.photos.isNotEmpty ? item.photos.first : null,
               name: item.name,
               meta: '${item.category} \u00B7 ${item.location}',
               tagType: _resolveTag(item),
@@ -61,17 +65,18 @@ class RecentSection extends ConsumerWidget {
   }
 
   /// 标签逻辑：
-  /// 1. 即将到期（7天内） → urgent
-  /// 2. 近30天内购买 → newItem
-  /// 3. 其他 → normal（在保）
+  /// 1. 已过保 → expired
+  /// 2. 即将到期（7天内） → urgent
+  /// 3. 近30天内购买 → newItem
+  /// 4. 其他 → normal（在保）
   ItemTagType _resolveTag(dynamic item) {
+    if (item.isWarrantyExpired) return ItemTagType.expired;
     if (item.isWarrantyExpiringSoon) return ItemTagType.urgent;
 
-    final daysSincePurchase =
-        DateTime.now().difference(item.purchaseDate).inDays;
+    final daysSincePurchase = DateTime.now()
+        .difference(item.purchaseDate)
+        .inDays;
     if (daysSincePurchase <= 30) return ItemTagType.newItem;
-
-    if (item.isUnderWarranty) return ItemTagType.normal;
 
     return ItemTagType.normal;
   }

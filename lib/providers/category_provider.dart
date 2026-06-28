@@ -2,12 +2,28 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../database/database.dart' as db;
 import '../daos/category_dao.dart';
+import '../models/category.dart';
 import '../models/category_item.dart';
 import 'database_provider.dart';
 
 part 'generated/category_provider.g.dart';
 
 // ─── Provider ─────────────────────────────────────────
+
+/// 物品库 tab 与新增物品页分类选择器共用的合并分类列表。
+/// 派生自 [CategoryManager]（数据库分类，含用户增删改）+ [Category.virtualCategories]（固定虚拟物品分类）。
+/// 用户在分类管理页的新增/编辑/删除会通过此 provider 实时反映到所有使用方。
+@riverpod
+List<Category> availableCategories(Ref ref) {
+  final asyncDb = ref.watch(categoryManagerProvider);
+  final dbCats = asyncDb.value ?? const <CategoryItem>[];
+  return [
+    // 数据库分类：id 作为 key（与物品 categoryKey 一致），label/emoji 来自数据库
+    for (final c in dbCats) Category(c.id, c.label, emoji: c.emoji),
+    // 虚拟物品分类：固定项，不参与用户增删
+    ...Category.virtualCategories,
+  ];
+}
 
 @riverpod
 class CategoryManager extends _$CategoryManager {

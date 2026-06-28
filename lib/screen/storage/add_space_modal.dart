@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/toast_utils.dart';
+import '../../widgets/app_dropdown_button.dart';
+import '../../widgets/emoji_text.dart';
 import '../../providers/storage_providers.dart';
 
 /// 数据回调：用户在新增模态框点击确认时触发
-typedef AddSpaceCallback = void Function({
-  required String level,
-  required String parentId,
-  required String name,
-  required String icon,
-});
+typedef AddSpaceCallback =
+    void Function({
+      required String level,
+      required String parentId,
+      required String name,
+      required String icon,
+    });
 
 /// 新增收纳空间模态框
 class AddSpaceModal extends ConsumerStatefulWidget {
@@ -40,11 +43,29 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
   late String _parentId; // 实际 ID（room id 或 cabinet id）
   String _addName = '';
   String _selectedIcon = '🛋️';
+  // slot 级别专用：用户选择的房间 ID（用于级联筛选柜体）
+  // 初始为 currentRoomId，若为空则等房间列表加载后取第一个
+  String? _slotParentRoomId;
 
   final List<String> _iconOptions = [
-    '🛋️', '🛏️', '📚', '🍳', '🗄️', '📺',
-    '👔', '💄', '💡', '📦', '🖥️', '🔌',
-    '🔧', '🧹', '🚪', '🧒', '🌱', '🚗',
+    '🛋️',
+    '🛏️',
+    '📚',
+    '🍳',
+    '🗄️',
+    '📺',
+    '👔',
+    '💄',
+    '💡',
+    '📦',
+    '🖥️',
+    '🔌',
+    '🔧',
+    '🧹',
+    '🚪',
+    '🧒',
+    '🌱',
+    '🚗',
   ];
 
   @override
@@ -54,6 +75,7 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
     if (widget.currentLevel == 2 && widget.currentCabinetId != null) {
       _addLevel = 'slot';
       _parentId = widget.currentCabinetId!;
+      _slotParentRoomId = widget.currentRoomId;
     } else if (widget.currentLevel == 1 && widget.currentRoomId != null) {
       _addLevel = 'cabinet';
       _parentId = widget.currentRoomId!;
@@ -222,37 +244,31 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
   }
 
   Widget _buildLevelSelect() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0E4D0), width: 1.5),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _addLevel,
-          isExpanded: true,
-          items: const [
-            DropdownMenuItem(value: 'room', child: Text('房间')),
-            DropdownMenuItem(value: 'cabinet', child: Text('柜体')),
-            DropdownMenuItem(value: 'slot', child: Text('格子/区域')),
-          ],
-          onChanged: (v) {
-            setState(() {
-              _addLevel = v!;
-              // 切换层级时重置父级选择
-              if (_addLevel == 'room') {
-                _parentId = '';
-              } else if (_addLevel == 'cabinet') {
-                _parentId = widget.currentRoomId ?? '';
-              } else {
-                _parentId = widget.currentCabinetId ?? '';
-              }
-            });
-          },
-        ),
-      ),
+    return AppDropdownButton<String>(
+      value: _addLevel,
+      items: const [
+        DropdownOption('room', '房间'),
+        DropdownOption('cabinet', '柜体'),
+        DropdownOption('slot', '格子/区域'),
+      ],
+      onChanged: (v) {
+        if (v == null) return;
+        setState(() {
+          _addLevel = v;
+          // 切换层级时重置父级选择
+          if (_addLevel == 'room') {
+            _parentId = '';
+            _slotParentRoomId = null;
+          } else if (_addLevel == 'cabinet') {
+            _parentId = widget.currentRoomId ?? '';
+            _slotParentRoomId = null;
+          } else {
+            // slot：以当前浏览房间为默认，后续用户可改
+            _slotParentRoomId = widget.currentRoomId;
+            _parentId = widget.currentCabinetId ?? '';
+          }
+        });
+      },
     );
   }
 
@@ -269,47 +285,159 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
             return _buildEmptyHint('请先添加房间');
           }
           // 确保当前 parentId 在列表中
-          final validId = rooms.any((r) => r.id == _parentId) ? _parentId : rooms.first.id;
+          final validId = rooms.any((r) => r.id == _parentId)
+              ? _parentId
+              : rooms.first.id;
           if (validId != _parentId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               setState(() => _parentId = validId);
             });
           }
           return _buildSelectFromList(
-            items: rooms.map((r) => (id: r.id, label: '${r.emoji} ${r.name}')).toList(),
+            items: rooms
+                .map((r) => (id: r.id, label: '${r.emoji} ${r.name}'))
+                .toList(),
             selectedId: validId,
             onChanged: (id) => setState(() => _parentId = id),
           );
         },
       );
     } else if (_addLevel == 'slot') {
-      // 选择柜体作为格子的上级
-      if (widget.currentRoomId == null) {
-        return _buildEmptyHint('请先选择房间');
-      }
-      final cabinetsAsync = ref.watch(cabinetsByRoomProvider(widget.currentRoomId!));
-      return cabinetsAsync.when(
-        loading: () => _buildLoadingSelect(),
-        error: (e, _) => _buildErrorSelect(),
-        data: (cabinets) {
-          if (cabinets.isEmpty) {
-            return _buildEmptyHint('该房间暂无柜体，请先添加');
-          }
-          final validId = cabinets.any((c) => c.id == _parentId) ? _parentId : cabinets.first.id;
-          if (validId != _parentId) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              setState(() => _parentId = validId);
-            });
-          }
-          return _buildSelectFromList(
-            items: cabinets.map((c) => (id: c.id, label: '${c.emoji} ${c.name}')).toList(),
-            selectedId: validId,
-            onChanged: (id) => setState(() => _parentId = id),
-          );
-        },
-      );
+      // 选择柜体作为格子的上级：级联「房间 → 柜体」
+      // 用户可跨房间选择任意柜体作为父级
+      return _buildSlotParentCascade();
     }
     return const SizedBox.shrink();
+  }
+
+  /// slot 级别的级联父级选择器：先选房间，再选该房间下的柜体。
+  Widget _buildSlotParentCascade() {
+    final roomsAsync = ref.watch(roomsProvider);
+    return roomsAsync.when(
+      loading: () => _buildLoadingSelect(),
+      error: (e, _) => _buildErrorSelect(),
+      data: (rooms) {
+        if (rooms.isEmpty) {
+          return _buildEmptyHint('请先添加房间');
+        }
+        // 初始化或校验所选房间
+        var selectedRoom = _slotParentRoomId;
+        if (selectedRoom == null || !rooms.any((r) => r.id == selectedRoom)) {
+          selectedRoom = rooms.first.id;
+          if (_slotParentRoomId != selectedRoom) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                _slotParentRoomId = selectedRoom;
+                _parentId = ''; // 房间变了，柜体待重选
+              });
+            });
+          }
+        }
+        return _buildRoomCabinetCascade(
+          rooms: rooms,
+          selectedRoomId: selectedRoom,
+        );
+      },
+    );
+  }
+
+  /// 渲染房间 + 柜体两个级联下拉，已选项带明确视觉标识。
+  Widget _buildRoomCabinetCascade({
+    required List<dynamic> rooms,
+    required String selectedRoomId,
+  }) {
+    final cabinetsAsync = ref.watch(cabinetsByRoomProvider(selectedRoomId));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 第一级：房间
+        _buildLabeledSelect(
+          label: '所在房间',
+          items: rooms
+              .map((r) => (id: r.id as String, label: '${r.emoji} ${r.name}'))
+              .toList(),
+          selectedId: selectedRoomId,
+          onChanged: (id) {
+            setState(() {
+              _slotParentRoomId = id;
+              _parentId = ''; // 重置柜体选择
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        // 第二级：柜体（依赖所选房间）
+        cabinetsAsync.when(
+          loading: () => _buildLoadingSelect(),
+          error: (e, _) => _buildErrorSelect(),
+          data: (cabinets) {
+            if (cabinets.isEmpty) {
+              return _buildEmptyHint('该房间暂无柜体，请先添加');
+            }
+            final validId = cabinets.any((c) => c.id == _parentId)
+                ? _parentId
+                : cabinets.first.id;
+            if (validId != _parentId) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() => _parentId = validId);
+              });
+            }
+            return _buildLabeledSelect(
+              label: '所属柜体',
+              items: cabinets
+                  .map((c) => (id: c.id, label: '${c.emoji} ${c.name}'))
+                  .toList(),
+              selectedId: validId,
+              onChanged: (id) => setState(() => _parentId = id),
+              highlight: true, // 最终父级高亮标识
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// 带小标题的下拉选择器，[highlight] 为 true 时给选中项加金色边框。
+  Widget _buildLabeledSelect({
+    required String label,
+    required List<({String id, String label})> items,
+    required String selectedId,
+    required ValueChanged<String> onChanged,
+    bool highlight = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: highlight
+                    ? AppColors.accentGold
+                    : AppColors.textSecondary,
+              ),
+            ),
+            if (highlight)
+              const Text(
+                ' · 已选定',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.accentGold,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _buildSelectFromList(
+          items: items,
+          selectedId: selectedId,
+          onChanged: onChanged,
+        ),
+      ],
+    );
   }
 
   Widget _buildSelectFromList({
@@ -317,28 +445,14 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
     required String selectedId,
     required ValueChanged<String> onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0E4D0), width: 1.5),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedId,
-          isExpanded: true,
-          items: items
-              .map((item) => DropdownMenuItem<String>(
-                    value: item.id,
-                    child: Text(item.label),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
+    return AppDropdownButton<String>(
+      value: selectedId,
+      items: items
+          .map((item) => DropdownOption<String>(item.id, item.label))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
     );
   }
 
@@ -393,8 +507,8 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
         hintText: _addLevel == 'room'
             ? '例如：客厅、卧室'
             : _addLevel == 'cabinet'
-                ? '例如：电视柜、衣柜'
-                : '例如：上层隔板、抽屉',
+            ? '例如：电视柜、衣柜'
+            : '例如：上层隔板、抽屉',
         hintStyle: const TextStyle(color: AppColors.textHint),
         filled: true,
         fillColor: AppColors.background,
@@ -443,7 +557,7 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
               ),
             ),
             child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: 24)),
+              child: EmojiText(emoji: icon, fontSize: 24),
             ),
           ),
         );

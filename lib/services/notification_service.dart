@@ -137,6 +137,9 @@ class NotificationService {
             channelDescription: '物品保修即将到期时推送通知提醒',
             importance: Importance.high,
             priority: Priority.high,
+            largeIcon: const DrawableResourceAndroidBitmap(
+              '@mipmap/launcher_icon',
+            ),
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -184,6 +187,9 @@ class NotificationService {
             channelDescription: '物品保修即将到期时推送通知提醒',
             importance: Importance.high,
             priority: Priority.high,
+            largeIcon: const DrawableResourceAndroidBitmap(
+              '@mipmap/launcher_icon',
+            ),
           ),
         ),
       );

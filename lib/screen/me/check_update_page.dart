@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/services/update_service.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -317,9 +318,7 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
                 ),
               ],
             ),
-            child: const Center(
-              child: Text('📦', style: TextStyle(fontSize: 40)),
-            ),
+            child: Center(child: EmojiText(emoji: '📦', fontSize: 40)),
           ),
           const SizedBox(height: 14),
           const Text(

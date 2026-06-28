@@ -134,6 +134,60 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _photosMeta = const VerificationMeta('photos');
+  @override
+  late final GeneratedColumn<String> photos = GeneratedColumn<String>(
+    'photos',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _brandMeta = const VerificationMeta('brand');
+  @override
+  late final GeneratedColumn<String> brand = GeneratedColumn<String>(
+    'brand',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _templateKeyMeta = const VerificationMeta(
+    'templateKey',
+  );
+  @override
+  late final GeneratedColumn<String> templateKey = GeneratedColumn<String>(
+    'template_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _templateDataMeta = const VerificationMeta(
+    'templateData',
+  );
+  @override
+  late final GeneratedColumn<String> templateData = GeneratedColumn<String>(
+    'template_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -148,6 +202,11 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     categoryKey,
     cabinetId,
     slotId,
+    photos,
+    brand,
+    note,
+    templateKey,
+    templateData,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -247,6 +306,42 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         slotId.isAcceptableOrUnknown(data['slot_id']!, _slotIdMeta),
       );
     }
+    if (data.containsKey('photos')) {
+      context.handle(
+        _photosMeta,
+        photos.isAcceptableOrUnknown(data['photos']!, _photosMeta),
+      );
+    }
+    if (data.containsKey('brand')) {
+      context.handle(
+        _brandMeta,
+        brand.isAcceptableOrUnknown(data['brand']!, _brandMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('template_key')) {
+      context.handle(
+        _templateKeyMeta,
+        templateKey.isAcceptableOrUnknown(
+          data['template_key']!,
+          _templateKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('template_data')) {
+      context.handle(
+        _templateDataMeta,
+        templateData.isAcceptableOrUnknown(
+          data['template_data']!,
+          _templateDataMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -304,6 +399,26 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.string,
         data['${effectivePrefix}slot_id'],
       ),
+      photos: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photos'],
+      )!,
+      brand: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}brand'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      templateKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_key'],
+      )!,
+      templateData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_data'],
+      )!,
     );
   }
 
@@ -326,6 +441,11 @@ class Item extends DataClass implements Insertable<Item> {
   final String categoryKey;
   final String? cabinetId;
   final String? slotId;
+  final String photos;
+  final String brand;
+  final String note;
+  final String templateKey;
+  final String templateData;
   const Item({
     required this.id,
     required this.name,
@@ -339,6 +459,11 @@ class Item extends DataClass implements Insertable<Item> {
     required this.categoryKey,
     this.cabinetId,
     this.slotId,
+    required this.photos,
+    required this.brand,
+    required this.note,
+    required this.templateKey,
+    required this.templateData,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -359,6 +484,11 @@ class Item extends DataClass implements Insertable<Item> {
     if (!nullToAbsent || slotId != null) {
       map['slot_id'] = Variable<String>(slotId);
     }
+    map['photos'] = Variable<String>(photos);
+    map['brand'] = Variable<String>(brand);
+    map['note'] = Variable<String>(note);
+    map['template_key'] = Variable<String>(templateKey);
+    map['template_data'] = Variable<String>(templateData);
     return map;
   }
 
@@ -380,6 +510,11 @@ class Item extends DataClass implements Insertable<Item> {
       slotId: slotId == null && nullToAbsent
           ? const Value.absent()
           : Value(slotId),
+      photos: Value(photos),
+      brand: Value(brand),
+      note: Value(note),
+      templateKey: Value(templateKey),
+      templateData: Value(templateData),
     );
   }
 
@@ -401,6 +536,11 @@ class Item extends DataClass implements Insertable<Item> {
       categoryKey: serializer.fromJson<String>(json['categoryKey']),
       cabinetId: serializer.fromJson<String?>(json['cabinetId']),
       slotId: serializer.fromJson<String?>(json['slotId']),
+      photos: serializer.fromJson<String>(json['photos']),
+      brand: serializer.fromJson<String>(json['brand']),
+      note: serializer.fromJson<String>(json['note']),
+      templateKey: serializer.fromJson<String>(json['templateKey']),
+      templateData: serializer.fromJson<String>(json['templateData']),
     );
   }
   @override
@@ -419,6 +559,11 @@ class Item extends DataClass implements Insertable<Item> {
       'categoryKey': serializer.toJson<String>(categoryKey),
       'cabinetId': serializer.toJson<String?>(cabinetId),
       'slotId': serializer.toJson<String?>(slotId),
+      'photos': serializer.toJson<String>(photos),
+      'brand': serializer.toJson<String>(brand),
+      'note': serializer.toJson<String>(note),
+      'templateKey': serializer.toJson<String>(templateKey),
+      'templateData': serializer.toJson<String>(templateData),
     };
   }
 
@@ -435,6 +580,11 @@ class Item extends DataClass implements Insertable<Item> {
     String? categoryKey,
     Value<String?> cabinetId = const Value.absent(),
     Value<String?> slotId = const Value.absent(),
+    String? photos,
+    String? brand,
+    String? note,
+    String? templateKey,
+    String? templateData,
   }) => Item(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -448,6 +598,11 @@ class Item extends DataClass implements Insertable<Item> {
     categoryKey: categoryKey ?? this.categoryKey,
     cabinetId: cabinetId.present ? cabinetId.value : this.cabinetId,
     slotId: slotId.present ? slotId.value : this.slotId,
+    photos: photos ?? this.photos,
+    brand: brand ?? this.brand,
+    note: note ?? this.note,
+    templateKey: templateKey ?? this.templateKey,
+    templateData: templateData ?? this.templateData,
   );
   Item copyWithCompanion(ItemsCompanion data) {
     return Item(
@@ -469,6 +624,15 @@ class Item extends DataClass implements Insertable<Item> {
           : this.categoryKey,
       cabinetId: data.cabinetId.present ? data.cabinetId.value : this.cabinetId,
       slotId: data.slotId.present ? data.slotId.value : this.slotId,
+      photos: data.photos.present ? data.photos.value : this.photos,
+      brand: data.brand.present ? data.brand.value : this.brand,
+      note: data.note.present ? data.note.value : this.note,
+      templateKey: data.templateKey.present
+          ? data.templateKey.value
+          : this.templateKey,
+      templateData: data.templateData.present
+          ? data.templateData.value
+          : this.templateData,
     );
   }
 
@@ -486,7 +650,12 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('status: $status, ')
           ..write('categoryKey: $categoryKey, ')
           ..write('cabinetId: $cabinetId, ')
-          ..write('slotId: $slotId')
+          ..write('slotId: $slotId, ')
+          ..write('photos: $photos, ')
+          ..write('brand: $brand, ')
+          ..write('note: $note, ')
+          ..write('templateKey: $templateKey, ')
+          ..write('templateData: $templateData')
           ..write(')'))
         .toString();
   }
@@ -505,6 +674,11 @@ class Item extends DataClass implements Insertable<Item> {
     categoryKey,
     cabinetId,
     slotId,
+    photos,
+    brand,
+    note,
+    templateKey,
+    templateData,
   );
   @override
   bool operator ==(Object other) =>
@@ -521,7 +695,12 @@ class Item extends DataClass implements Insertable<Item> {
           other.status == this.status &&
           other.categoryKey == this.categoryKey &&
           other.cabinetId == this.cabinetId &&
-          other.slotId == this.slotId);
+          other.slotId == this.slotId &&
+          other.photos == this.photos &&
+          other.brand == this.brand &&
+          other.note == this.note &&
+          other.templateKey == this.templateKey &&
+          other.templateData == this.templateData);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -537,6 +716,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> categoryKey;
   final Value<String?> cabinetId;
   final Value<String?> slotId;
+  final Value<String> photos;
+  final Value<String> brand;
+  final Value<String> note;
+  final Value<String> templateKey;
+  final Value<String> templateData;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -551,6 +735,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.categoryKey = const Value.absent(),
     this.cabinetId = const Value.absent(),
     this.slotId = const Value.absent(),
+    this.photos = const Value.absent(),
+    this.brand = const Value.absent(),
+    this.note = const Value.absent(),
+    this.templateKey = const Value.absent(),
+    this.templateData = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -566,6 +755,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.categoryKey = const Value.absent(),
     this.cabinetId = const Value.absent(),
     this.slotId = const Value.absent(),
+    this.photos = const Value.absent(),
+    this.brand = const Value.absent(),
+    this.note = const Value.absent(),
+    this.templateKey = const Value.absent(),
+    this.templateData = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -584,6 +778,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<String>? categoryKey,
     Expression<String>? cabinetId,
     Expression<String>? slotId,
+    Expression<String>? photos,
+    Expression<String>? brand,
+    Expression<String>? note,
+    Expression<String>? templateKey,
+    Expression<String>? templateData,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -599,6 +798,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (categoryKey != null) 'category_key': categoryKey,
       if (cabinetId != null) 'cabinet_id': cabinetId,
       if (slotId != null) 'slot_id': slotId,
+      if (photos != null) 'photos': photos,
+      if (brand != null) 'brand': brand,
+      if (note != null) 'note': note,
+      if (templateKey != null) 'template_key': templateKey,
+      if (templateData != null) 'template_data': templateData,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -616,6 +820,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<String>? categoryKey,
     Value<String?>? cabinetId,
     Value<String?>? slotId,
+    Value<String>? photos,
+    Value<String>? brand,
+    Value<String>? note,
+    Value<String>? templateKey,
+    Value<String>? templateData,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -631,6 +840,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       categoryKey: categoryKey ?? this.categoryKey,
       cabinetId: cabinetId ?? this.cabinetId,
       slotId: slotId ?? this.slotId,
+      photos: photos ?? this.photos,
+      brand: brand ?? this.brand,
+      note: note ?? this.note,
+      templateKey: templateKey ?? this.templateKey,
+      templateData: templateData ?? this.templateData,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -674,6 +888,21 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (slotId.present) {
       map['slot_id'] = Variable<String>(slotId.value);
     }
+    if (photos.present) {
+      map['photos'] = Variable<String>(photos.value);
+    }
+    if (brand.present) {
+      map['brand'] = Variable<String>(brand.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (templateKey.present) {
+      map['template_key'] = Variable<String>(templateKey.value);
+    }
+    if (templateData.present) {
+      map['template_data'] = Variable<String>(templateData.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -695,6 +924,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('categoryKey: $categoryKey, ')
           ..write('cabinetId: $cabinetId, ')
           ..write('slotId: $slotId, ')
+          ..write('photos: $photos, ')
+          ..write('brand: $brand, ')
+          ..write('note: $note, ')
+          ..write('templateKey: $templateKey, ')
+          ..write('templateData: $templateData, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3195,6 +3429,11 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<String> categoryKey,
       Value<String?> cabinetId,
       Value<String?> slotId,
+      Value<String> photos,
+      Value<String> brand,
+      Value<String> note,
+      Value<String> templateKey,
+      Value<String> templateData,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3211,6 +3450,11 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<String> categoryKey,
       Value<String?> cabinetId,
       Value<String?> slotId,
+      Value<String> photos,
+      Value<String> brand,
+      Value<String> note,
+      Value<String> templateKey,
+      Value<String> templateData,
       Value<int> rowid,
     });
 
@@ -3279,6 +3523,31 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
 
   ColumnFilters<String> get slotId => $composableBuilder(
     column: $table.slotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photos => $composableBuilder(
+    column: $table.photos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get brand => $composableBuilder(
+    column: $table.brand,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateKey => $composableBuilder(
+    column: $table.templateKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateData => $composableBuilder(
+    column: $table.templateData,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3351,6 +3620,31 @@ class $$ItemsTableOrderingComposer
     column: $table.slotId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get photos => $composableBuilder(
+    column: $table.photos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get brand => $composableBuilder(
+    column: $table.brand,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateKey => $composableBuilder(
+    column: $table.templateKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateData => $composableBuilder(
+    column: $table.templateData,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -3403,6 +3697,25 @@ class $$ItemsTableAnnotationComposer
 
   GeneratedColumn<String> get slotId =>
       $composableBuilder(column: $table.slotId, builder: (column) => column);
+
+  GeneratedColumn<String> get photos =>
+      $composableBuilder(column: $table.photos, builder: (column) => column);
+
+  GeneratedColumn<String> get brand =>
+      $composableBuilder(column: $table.brand, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get templateKey => $composableBuilder(
+    column: $table.templateKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get templateData => $composableBuilder(
+    column: $table.templateData,
+    builder: (column) => column,
+  );
 }
 
 class $$ItemsTableTableManager
@@ -3445,6 +3758,11 @@ class $$ItemsTableTableManager
                 Value<String> categoryKey = const Value.absent(),
                 Value<String?> cabinetId = const Value.absent(),
                 Value<String?> slotId = const Value.absent(),
+                Value<String> photos = const Value.absent(),
+                Value<String> brand = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String> templateKey = const Value.absent(),
+                Value<String> templateData = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -3459,6 +3777,11 @@ class $$ItemsTableTableManager
                 categoryKey: categoryKey,
                 cabinetId: cabinetId,
                 slotId: slotId,
+                photos: photos,
+                brand: brand,
+                note: note,
+                templateKey: templateKey,
+                templateData: templateData,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3475,6 +3798,11 @@ class $$ItemsTableTableManager
                 Value<String> categoryKey = const Value.absent(),
                 Value<String?> cabinetId = const Value.absent(),
                 Value<String?> slotId = const Value.absent(),
+                Value<String> photos = const Value.absent(),
+                Value<String> brand = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String> templateKey = const Value.absent(),
+                Value<String> templateData = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -3489,6 +3817,11 @@ class $$ItemsTableTableManager
                 categoryKey: categoryKey,
                 cabinetId: cabinetId,
                 slotId: slotId,
+                photos: photos,
+                brand: brand,
+                note: note,
+                templateKey: templateKey,
+                templateData: templateData,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

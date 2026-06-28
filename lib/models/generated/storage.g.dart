@@ -65,6 +65,7 @@ Map<String, dynamic> _$SlotToJson(_Slot instance) => <String, dynamic>{
 };
 
 _SpaceItem _$SpaceItemFromJson(Map<String, dynamic> json) => _SpaceItem(
+  id: (json['id'] as num).toInt(),
   emoji: json['emoji'] as String,
   name: json['name'] as String,
   meta: json['meta'] as String,
@@ -72,6 +73,7 @@ _SpaceItem _$SpaceItemFromJson(Map<String, dynamic> json) => _SpaceItem(
 
 Map<String, dynamic> _$SpaceItemToJson(_SpaceItem instance) =>
     <String, dynamic>{
+      'id': instance.id,
       'emoji': instance.emoji,
       'name': instance.name,
       'meta': instance.meta,

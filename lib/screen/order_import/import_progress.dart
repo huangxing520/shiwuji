@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
 /// Data class for a single imported item displayed in the progress list.
 class ImportedItem {
@@ -71,9 +72,7 @@ class ImportProgressSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  importDone
-                      ? '导入完成！'
-                      : '正在导入${platformName ?? ''}订单…',
+                  importDone ? '导入完成！' : '正在导入${platformName ?? ''}订单…',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -81,30 +80,32 @@ class ImportProgressSection extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: importDone
                         ? AppColors.successLight
                         : isImporting
-                            ? AppColors.accentLight
-                            : AppColors.dangerLight,
+                        ? AppColors.accentLight
+                        : AppColors.dangerLight,
                   ),
                   child: Text(
                     importDone
                         ? '已完成'
                         : isImporting
-                            ? '导入中'
-                            : '出错',
+                        ? '导入中'
+                        : '出错',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: importDone
                           ? AppColors.statusUsing
                           : isImporting
-                              ? AppColors.primaryDark
-                              : AppColors.danger,
+                          ? AppColors.primaryDark
+                          : AppColors.danger,
                     ),
                   ),
                 ),
@@ -167,7 +168,8 @@ class ImportProgressSection extends StatelessWidget {
                               ],
                               stops: const [0.0, 0.5, 1.0],
                               transform: _SlidingGradientTransform(
-                                  shimmerX / rect.width),
+                                shimmerX / rect.width,
+                              ),
                             ).createShader(rect);
                           },
                           blendMode: BlendMode.srcATop,
@@ -190,13 +192,25 @@ class ImportProgressSection extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildStatItem(
-            value: '$totalCount', label: '总订单', color: AppColors.textPrimary),
+          value: '$totalCount',
+          label: '总订单',
+          color: AppColors.textPrimary,
+        ),
         _buildStatItem(
-            value: '$successCount', label: '成功', color: AppColors.success),
+          value: '$successCount',
+          label: '成功',
+          color: AppColors.success,
+        ),
         _buildStatItem(
-            value: '$failCount', label: '失败', color: AppColors.danger),
+          value: '$failCount',
+          label: '失败',
+          color: AppColors.danger,
+        ),
         _buildStatItem(
-            value: '$pendingCount', label: '等待中', color: AppColors.warning),
+          value: '$pendingCount',
+          label: '等待中',
+          color: AppColors.warning,
+        ),
       ],
     );
   }
@@ -236,18 +250,15 @@ class ImportProgressSection extends StatelessWidget {
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: importedItems.length,
-        separatorBuilder: (_, _) => const Divider(
-          color: AppColors.border,
-          height: 1,
-          thickness: 1,
-        ),
+        separatorBuilder: (_, _) =>
+            const Divider(color: AppColors.border, height: 1, thickness: 1),
         itemBuilder: (context, index) {
           final item = importedItems[index];
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Text(item.emoji, style: const TextStyle(fontSize: 18)),
+                EmojiText(emoji: item.emoji, fontSize: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -270,8 +281,10 @@ class ImportProgressSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     color: item.success

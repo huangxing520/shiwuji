@@ -48,10 +48,7 @@ class _DataCardState extends State<DataCard>
       duration: const Duration(milliseconds: 600),
     );
     _bounceAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Cubic(0.34, 1.56, 0.64, 1),
-      ),
+      CurvedAnimation(parent: _ctrl, curve: const Cubic(0.34, 1.56, 0.64, 1)),
     );
     if (widget.delayMs == 0) {
       _ctrl.forward();
@@ -82,13 +79,11 @@ class _DataCardState extends State<DataCard>
       builder: (context, child) {
         return Opacity(
           opacity: _bounceAnim.value.clamp(0.0, 1.0),
-          child: Transform.scale(
-            scale: _bounceAnim.value,
-            child: child,
-          ),
+          child: Transform.scale(scale: _bounceAnim.value, child: child),
         );
       },
-      child: Container(clipBehavior: Clip.antiAlias,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(24),
@@ -168,7 +163,10 @@ class _DataCardState extends State<DataCard>
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: widget.trendUp
                           ? AppColors.tagNewBg
@@ -179,7 +177,9 @@ class _DataCardState extends State<DataCard>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          widget.trendUp ? Icons.trending_up : Icons.trending_down,
+                          widget.trendUp
+                              ? Icons.trending_up
+                              : Icons.trending_down,
                           size: 12,
                           color: widget.trendUp
                               ? AppColors.tagNew

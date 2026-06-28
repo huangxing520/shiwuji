@@ -53,6 +53,7 @@ abstract class Slot with _$Slot {
 @freezed
 abstract class SpaceItem with _$SpaceItem {
   const factory SpaceItem({
+    required int id,
     required String emoji,
     required String name,
     required String meta,

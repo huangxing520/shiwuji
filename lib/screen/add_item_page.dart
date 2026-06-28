@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart' hide DatePickerTheme;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,31 +6,22 @@ import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/models/template.dart';
 import 'package:shi_wu_ji/models/picker_item.dart';
-import 'package:shi_wu_ji/models/photo_data.dart';
+import 'package:shi_wu_ji/models/emoji_classifier.dart';
 import 'package:shi_wu_ji/models/item.dart';
+import 'package:shi_wu_ji/widgets/app_dropdown_button.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/providers/storage_providers.dart';
+import 'package:shi_wu_ji/providers/category_provider.dart';
 import 'package:shi_wu_ji/services/notification_service.dart';
-
-/// 分类标签 → key 映射（手动选择分类时使用）
-const Map<String, String> _categoryLabelToKey = {
-  '数码': 'digital',
-  '家电': 'appliance',
-  '护肤': 'skincare',
-  '厨房': 'kitchen',
-  '衣物': 'clothing',
-  '书籍': 'books',
-  '收纳': 'storage',
-  '玩具': 'toys',
-  '运动': 'sports',
-  '文具': 'stationery',
-  '钥匙': 'keys',
-  '工具': 'tools',
-};
+import 'package:shi_wu_ji/services/photo_service.dart';
 
 // ==================== 主页面 ====================
 class AddItemPage extends ConsumerStatefulWidget {
-  const AddItemPage({super.key});
+  /// 编辑模式时传入的物品 id；新增模式为 null
+  final String? itemId;
+
+  const AddItemPage({super.key, this.itemId});
 
   @override
   ConsumerState<AddItemPage> createState() => _AddItemPageState();
@@ -37,6 +29,8 @@ class AddItemPage extends ConsumerStatefulWidget {
 
 class _AddItemPageState extends ConsumerState<AddItemPage>
     with TickerProviderStateMixin {
+  bool get _isEdit => widget.itemId != null;
+
   // 表单控制器
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
@@ -48,8 +42,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   // 模板字段控制器
   final Map<String, TextEditingController> _tplControllers = {};
 
-  // 照片（模拟用 emoji + 颜色替代）
-  final List<PhotoData> _photos = [];
+  // 照片（真实本地文件路径 + 上传状态）
+  final List<PhotoEntry> _photos = [];
+  bool _isPicking = false;
 
   // 状态
   String _selectedTemplate = 'none';
@@ -58,6 +53,12 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   String? _selectedCategoryKey;
   String? _selectedLocation;
   StorageLocationNode? _selectedLocationNode;
+
+  // 动态 emoji：随模板默认值 + 名称/品牌/备注关键词实时更新
+  String _currentEmoji = '📦';
+
+  // 编辑模式下记录原始照片路径，用于提交时清理被删除的文件
+  List<String> _originalPhotos = const [];
 
   // 提醒开关
   bool _expiryOn = false;
@@ -97,6 +98,18 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       parent: _templateFieldsAnimController,
       curve: Curves.easeOutBack,
     );
+
+    // 监听名称/品牌/备注变化，实时更新动态 emoji
+    _nameController.addListener(_updateEmoji);
+    _brandController.addListener(_updateEmoji);
+    _noteController.addListener(_updateEmoji);
+
+    // 编辑模式：从数据库预填充；新增模式：始终为空白表单
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isEdit) {
+        _prefillFromItem();
+      }
+    });
   }
 
   @override
@@ -114,6 +127,80 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     }
     _templateFieldsAnimController.dispose();
     super.dispose();
+  }
+
+  // ==================== 编辑模式预填充 ====================
+  void _prefillFromItem() {
+    final item = ref.read(itemByIdProvider(widget.itemId!));
+    if (item == null) return;
+
+    _nameController.text = item.name;
+    _brandController.text = item.brand;
+    _priceController.text = item.price.toStringAsFixed(
+      item.price == item.price.roundToDouble() ? 0 : 2,
+    );
+    _noteController.text = item.note;
+    _buyDateController.text =
+        '${item.purchaseDate.year}-${item.purchaseDate.month.toString().padLeft(2, '0')}-${item.purchaseDate.day.toString().padLeft(2, '0')}';
+
+    _selectedCategory = item.category == '未分类' ? null : item.category;
+    _selectedCategoryKey = item.categoryKey.isEmpty ? null : item.categoryKey;
+    _selectedLocation = item.location == '未知' ? null : item.location;
+
+    // 还原模板选择与模板字段值
+    _selectedTemplate = item.templateKey;
+    final tplData = templateFieldsMap[item.templateKey];
+    if (item.templateKey != 'none' && tplData != null) {
+      for (final f in tplData.fields) {
+        _tplControllers[f.id] = TextEditingController(
+          text: item.templateData[f.id] ?? '',
+        );
+      }
+      _templateFieldsAnimController.value = 1.0;
+    }
+
+    // 还原保修信息
+    if (item.warrantyDays > 0 && item.warrantyDays != 365) {
+      _warrantyOn = true;
+      final warrantyEnd = item.warrantyEndDate;
+      _warrantyDate = warrantyEnd;
+      _warrantyDateController.text =
+          '${warrantyEnd.year}-${warrantyEnd.month.toString().padLeft(2, '0')}-${warrantyEnd.day.toString().padLeft(2, '0')}';
+    }
+
+    // 还原照片
+    _originalPhotos = List<String>.from(item.photos);
+    _photos
+      ..clear()
+      ..addAll(
+        item.photos.map(
+          (p) => PhotoEntry(path: p, status: PhotoStatus.success),
+        ),
+      );
+
+    // 还原收纳位置节点
+    if (item.cabinetId != null || item.slotId != null) {
+      final nodes = ref.read(storageLocationTreeProvider).value ?? const [];
+      StorageLocationNode? matched;
+      if (item.slotId != null) {
+        matched = nodes
+            .where((n) => n.isSlot && n.id == item.slotId)
+            .cast<StorageLocationNode?>()
+            .firstWhere((_) => true, orElse: () => null);
+      } else if (item.cabinetId != null) {
+        matched = nodes
+            .where((n) => !n.isSlot && n.id == item.cabinetId)
+            .cast<StorageLocationNode?>()
+            .firstWhere((_) => true, orElse: () => null);
+      }
+      _selectedLocationNode = matched;
+    }
+
+    // 编辑模式：以物品现有 emoji 为初值，后续编辑名称/品牌/备注时由监听器动态更新
+    _currentEmoji = item.emoji.isNotEmpty
+        ? item.emoji
+        : EmojiClassifier.defaultEmojiOf(_selectedTemplate);
+    setState(() {});
   }
 
   // ==================== Toast ====================
@@ -145,30 +232,148 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   }
 
   // ==================== 照片操作 ====================
-  void _addPhoto() {
-    if (_photos.length >= 6) {
-      _showToast('最多上传6张照片');
+  Future<void> _addPhoto() async {
+    if (_isPicking) return;
+    if (_photos.length >= PhotoService.maxPhotos) {
+      _showToast('最多添加 ${PhotoService.maxPhotos} 张照片');
       return;
     }
+    setState(() => _isPicking = true);
+
+    final remaining = PhotoService.maxPhotos - _photos.length;
+    final result = await PhotoService.instance.pickFromGallery(
+      remaining: remaining,
+    );
+
+    if (!mounted) return;
     setState(() {
-      final idx = _photos.length;
-      _photos.add(
-        PhotoData(
-          emoji: photoEmojis[idx % photoEmojis.length],
-          color: photoColors[idx % photoColors.length],
-        ),
-      );
+      _photos.addAll(result.entries);
+      _isPicking = false;
     });
-    _showToast('图片已添加（模拟）');
+
+    if (result.error != null && result.entries.isEmpty) {
+      _showToast(result.error!);
+    } else if (result.error != null) {
+      _showToast('部分图片未通过：${result.error}');
+    } else if (result.entries.isNotEmpty) {
+      _showToast('已添加 ${result.entries.length} 张照片');
+    }
+  }
+
+  Future<void> _addPhotoFromCamera() async {
+    if (_isPicking) return;
+    if (_photos.length >= PhotoService.maxPhotos) {
+      _showToast('最多添加 ${PhotoService.maxPhotos} 张照片');
+      return;
+    }
+    setState(() => _isPicking = true);
+
+    final result = await PhotoService.instance.pickFromCamera();
+
+    if (!mounted) return;
+    setState(() {
+      _photos.addAll(result.entries);
+      _isPicking = false;
+    });
+
+    if (result.error != null) {
+      _showToast(result.error!);
+    } else if (result.entries.isNotEmpty) {
+      _showToast('已添加照片');
+    }
+  }
+
+  void _showPhotoSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library,
+                color: AppColors.primary,
+              ),
+              title: const Text('从相册选择'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addPhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('拍照'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addPhotoFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close, color: AppColors.textSecondary),
+              title: const Text('取消'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
+      ),
+    );
   }
 
   void _removePhoto(int index) {
+    final removed = _photos[index];
     setState(() {
       _photos.removeAt(index);
     });
+    // 编辑模式下：被删除的若是已存库照片，提交时再清理文件；
+    // 新增模式下草稿照片直接删除文件
+    if (!_isEdit && !_originalPhotos.contains(removed.path)) {
+      PhotoService.instance.deleteFile(removed.path);
+    }
+  }
+
+  void _retryPhoto(int index) {
+    final entry = _photos[index];
+    if (entry.status != PhotoStatus.failed) return;
+    setState(() {
+      _photos[index] = entry.copyWith(status: PhotoStatus.uploading);
+    });
+    // 失败重试：重新拷贝（失败条目 path 指向缓存原图路径的场景极少，这里直接移除让用户重选）
+    setState(() {
+      _photos.removeAt(index);
+    });
+    _showToast('请重新选择该照片');
   }
 
   // ==================== 模板选择 ====================
+  /// 动态 emoji 更新：基于当前模板大类默认值 + 名称/品牌/备注关键词匹配。
+  /// 由 _nameController/_brandController/_noteController 的监听器触发，
+  /// 也在模板切换、表单重置后主动调用。
+  void _updateEmoji() {
+    final content =
+        '${_nameController.text} ${_brandController.text} ${_noteController.text}';
+    final emoji = EmojiClassifier.classify(
+      mainCategoryKey: _selectedTemplate,
+      content: content,
+    );
+    // 始终 setState：emoji 不变时预览标签（命中分类名）仍可能变化
+    setState(() => _currentEmoji = emoji);
+  }
+
   void _selectTemplate(String key) {
     setState(() {
       _selectedTemplate = key;
@@ -190,7 +395,10 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         _selectedCategory = card.name;
         _selectedCategoryKey = key;
       }
+      // 模板切换后重置为该大类默认 emoji，再依据当前输入内容重新匹配
+      _currentEmoji = EmojiClassifier.defaultEmojiOf(key);
     });
+    _updateEmoji();
 
     final data = templateFieldsMap[key];
     if (key == 'none' || data == null) {
@@ -206,9 +414,23 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
   // ==================== 选择器 ====================
   void _openPicker({required bool isCategory}) {
-    final data = isCategory ? categoryData : locationData;
-    final currentSelected = isCategory ? _selectedCategory : _selectedLocation;
     final title = isCategory ? '选择分类' : '选择收纳位置';
+    final currentSelected = isCategory ? _selectedCategory : _selectedLocation;
+
+    // 分类选择：动态读取数据库分类（含用户增删改），不用硬编码 categoryData
+    // 虚拟物品分类（会员订阅等）不在此处可选，仅能通过品类模版设置
+    final List<PickerItem> data;
+    final Map<String, String> labelToKey;
+    if (isCategory) {
+      final dbCats = ref.read(categoryManagerProvider).value ?? const [];
+      data = [
+        for (final c in dbCats) PickerItem(emoji: c.emoji, name: c.label),
+      ];
+      labelToKey = {for (final c in dbCats) c.label: c.id};
+    } else {
+      data = locationData;
+      labelToKey = const {};
+    }
 
     showModalBottomSheet(
       context: context,
@@ -222,7 +444,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
           setState(() {
             if (isCategory) {
               _selectedCategory = name;
-              _selectedCategoryKey = _categoryLabelToKey[name];
+              _selectedCategoryKey = labelToKey[name];
             } else {
               _selectedLocation = name;
             }
@@ -244,8 +466,10 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         return Consumer(
           builder: (ctx, ref, _) {
             final asyncNodes = ref.watch(storageLocationTreeProvider);
+            final allNodes = asyncNodes.value ?? const [];
+            final slotNodes = allNodes.where((n) => n.isSlot).toList();
             return _LocationPickerSheet(
-              nodes: asyncNodes.value ?? const [],
+              nodes: slotNodes,
               isLoading: asyncNodes.isLoading,
               selectedNode: _selectedLocationNode,
               onPick: (node) {
@@ -314,7 +538,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   }
 
   // ==================== 保存 ====================
-  void _saveItem(bool andContinue) {
+  Future<void> _saveItem(bool andContinue) async {
     final name = _nameController.text.trim();
     final priceStr = _priceController.text.trim();
 
@@ -326,6 +550,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     final price = double.tryParse(priceStr);
     if (price == null || price <= 0) {
       _showToast('请填写有效的购买价格');
+      FocusScope.of(context).unfocus();
+      return;
+    }
+
+    // 通用物品创建流程：必须手动选择分类（非通用模版已自动绑定分类）
+    if (_selectedTemplate == 'none' && _selectedCategory == null) {
+      _showToast('请选择物品分类');
       FocusScope.of(context).unfocus();
       return;
     }
@@ -348,47 +579,118 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       } catch (_) {}
     }
 
-    // 创建 Item 并写入数据库
-    final node = _selectedLocationNode;
-    final item = Item.create(
-      name: name,
-      price: price,
-      emoji: '📦',
-      category: _selectedCategory ?? '未分类',
-      location: _selectedLocation ?? '未知',
-      purchaseDate: purchaseDate,
-      warrantyDays: warrantyDays,
-      status: 'safe',
-      categoryKey: _selectedCategoryKey ?? '',
-      cabinetId: node?.cabinetId,
-      slotId: node?.isSlot == true ? node?.id : null,
-    );
+    // 照片路径（仅取成功状态的）
+    final photoPaths = _photos
+        .where((p) => p.status == PhotoStatus.success)
+        .map((p) => p.path)
+        .toList();
 
-    ref.read(itemsProvider.notifier).addItem(item);
-
-    // 如果开启了保修提醒，调度到期通知
-    if (_warrantyOn && _warrantyDate != null) {
-      NotificationService().scheduleWarrantyReminder(item);
+    // 模板字段值
+    final tplDataMap = <String, String>{};
+    for (final e in _tplControllers.entries) {
+      final v = e.value.text.trim();
+      if (v.isNotEmpty) tplDataMap[e.key] = v;
     }
 
-    if (andContinue) {
-      _successTitle = '已保存！';
-      _successSub = '「$name」已入库，继续添加下一件吧';
-      _successBtnText = '继续新增';
-      _successBtnAction = () {
-        setState(() => _showSuccess = false);
-        _resetForm();
-      };
-    } else {
+    final node = _selectedLocationNode;
+    final bool saving = _isEdit;
+
+    if (saving) {
+      // 编辑模式：全量更新
+      final existing = ref.read(itemByIdProvider(widget.itemId!));
+      final item = Item(
+        id: existing!.id,
+        name: name,
+        price: price,
+        emoji: existing.emoji.isEmpty ? '📦' : existing.emoji,
+        category: _selectedCategory ?? '未分类',
+        location: _selectedLocation ?? '未知',
+        purchaseDate: purchaseDate,
+        warrantyDays: warrantyDays,
+        status: existing.status,
+        categoryKey: _selectedCategoryKey ?? '',
+        cabinetId: node?.cabinetId,
+        slotId: node?.isSlot == true ? node?.id : null,
+        photos: photoPaths,
+        brand: _brandController.text.trim(),
+        note: _noteController.text.trim(),
+        templateKey: _selectedTemplate,
+        templateData: tplDataMap,
+      );
+
+      await ref.read(itemsProvider.notifier).updateItem(item);
+
+      // 清理被删除的旧照片文件
+      final removedFiles = _originalPhotos
+          .where((p) => !photoPaths.contains(p))
+          .toList();
+      for (final f in removedFiles) {
+        PhotoService.instance.deleteFile(f);
+      }
+
+      // 重新调度保修提醒
+      if (_warrantyOn && _warrantyDate != null) {
+        NotificationService().scheduleWarrantyReminder(item);
+      }
+
       _successTitle = '保存成功！';
-      _successSub = '「$name」已添加到你的物品库';
+      _successSub = '「$name」的信息已更新';
       _successBtnText = '好的';
       _successBtnAction = () {
-        setState(() => _showSuccess = false);
+        if (mounted) {
+          setState(() => _showSuccess = false);
+          Navigator.of(context).pop();
+        }
       };
+    } else {
+      // 新增模式
+      final item = Item.create(
+        name: name,
+        price: price,
+        emoji: _currentEmoji,
+        category: _selectedCategory ?? '未分类',
+        location: _selectedLocation ?? '未知',
+        purchaseDate: purchaseDate,
+        warrantyDays: warrantyDays,
+        status: 'safe',
+        categoryKey: _selectedCategoryKey ?? '',
+        cabinetId: node?.cabinetId,
+        slotId: node?.isSlot == true ? node?.id : null,
+        photos: photoPaths,
+        brand: _brandController.text.trim(),
+        note: _noteController.text.trim(),
+        templateKey: _selectedTemplate,
+        templateData: tplDataMap,
+      );
+
+      await ref.read(itemsProvider.notifier).addItem(item);
+
+      if (_warrantyOn && _warrantyDate != null) {
+        NotificationService().scheduleWarrantyReminder(item);
+      }
+
+      if (andContinue) {
+        _successTitle = '已保存！';
+        _successSub = '「$name」已入库，继续添加下一件吧';
+        _successBtnText = '继续新增';
+        _successBtnAction = () {
+          setState(() => _showSuccess = false);
+          _resetForm();
+        };
+      } else {
+        _successTitle = '保存成功！';
+        _successSub = '「$name」已添加到你的物品库';
+        _successBtnText = '好的';
+        _successBtnAction = () {
+          if (mounted) {
+            setState(() => _showSuccess = false);
+            Navigator.of(context).pop();
+          }
+        };
+      }
     }
 
-    setState(() => _showSuccess = true);
+    if (mounted) setState(() => _showSuccess = true);
   }
 
   void _resetForm() {
@@ -409,6 +711,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       _selectedCategoryKey = null;
       _selectedLocation = null;
       _selectedLocationNode = null;
+      _currentEmoji = '📦';
       _expiryOn = false;
       _warrantyOn = false;
       _maintainOn = false;
@@ -513,9 +816,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            '新增物品',
-            style: TextStyle(
+          Text(
+            _isEdit ? '编辑物品' : '新增物品',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
@@ -528,125 +831,99 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
   // ==================== 照片区域 ====================
   Widget _buildPhotoSection() {
-    return SizedBox(
-      height: 100,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _photos.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          if (index == _photos.length) {
-            // 添加按钮
-            return GestureDetector(
-              onTap: _addPhoto,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: AppColors.border,
-                    width: 2.5,
-                    strokeAlign: BorderSide.strokeAlignInside,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, size: 28, color: AppColors.textHint),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '添加照片',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textHint,
-                      ),
-                    ),
-                  ],
-                ),
+    final canAddMore = _photos.length < PhotoService.maxPhotos;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.photo_camera_outlined,
+              size: 14,
+              color: AppColors.primaryDark,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '物品照片 · ${_photos.length}/${PhotoService.maxPhotos}（JPG/PNG，≤5MB）',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
               ),
-            );
-          }
-          // 照片缩略图
-          final photo = _photos[index];
-          return Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.textPrimary.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              children: [
-                // 模拟图片
-                Container(
-                  color: photo.color,
-                  child: Center(
-                    child: Text(
-                      photo.emoji,
-                      style: const TextStyle(fontSize: 36),
-                    ),
-                  ),
-                ),
-                // 删除按钮
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => _removePhoto(index),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 12,
-                        color: Colors.white,
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _photos.length + (canAddMore ? 1 : 0),
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              if (index == _photos.length) {
+                // 添加按钮
+                return GestureDetector(
+                  onTap: _isPicking ? null : _showPhotoSourceSheet,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.border,
+                        width: 2.5,
+                        strokeAlign: BorderSide.strokeAlignInside,
                       ),
                     ),
+                    child: _isPicking
+                        ? const Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.add,
+                                size: 28,
+                                color: AppColors.textHint,
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                '添加照片',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                ),
-                // 封面标签
-                if (index == 0)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.warning],
-                        ),
-                      ),
-                      child: const Text(
-                        '封面',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
+                );
+              }
+              // 照片缩略图
+              final photo = _photos[index];
+              return _PhotoThumb(
+                entry: photo,
+                isCover: index == 0,
+                onRemove: () => _removePhoto(index),
+                onRetry: photo.status == PhotoStatus.failed
+                    ? () => _retryPhoto(index)
+                    : null,
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -715,7 +992,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(card.emoji, style: const TextStyle(fontSize: 22)),
+                      EmojiText(emoji: card.emoji, fontSize: 22),
                       const SizedBox(width: 8),
                       Text(
                         card.name,
@@ -840,14 +1117,60 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     );
   }
 
+  /// 动态 emoji 预览：实时展示根据模板+名称/品牌/备注匹配到的图标。
+  /// 配合 AnimatedSwitcher 实现切换过渡，命中二级分类时附带分类名提示。
+  Widget _buildEmojiPreview() {
+    final content =
+        '${_nameController.text} ${_brandController.text} ${_noteController.text}';
+    final matched = EmojiClassifier.matchDetail(
+      mainCategoryKey: _selectedTemplate,
+      content: content,
+    );
+    final isMatched = matched != null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          isMatched ? matched.name : '默认',
+          style: TextStyle(
+            fontSize: 11,
+            color: isMatched ? AppColors.primary : AppColors.textHint,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 6),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, anim) =>
+              ScaleTransition(scale: anim, child: child),
+          child: Container(
+            key: ValueKey(_currentEmoji),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: AppColors.accentLightBg,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            alignment: Alignment.center,
+            child: Text(_currentEmoji, style: const TextStyle(fontSize: 17)),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ==================== 基本信息 ====================
   Widget _buildBasicInfoSection() {
     return _FormCard(
       icon: Icons.edit,
       title: '基本信息',
       children: [
-        // 物品名称
-        _buildLabel('物品名称', required: true),
+        // 物品名称 + 动态 emoji 预览
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [_buildLabel('物品名称', required: true), _buildEmojiPreview()],
+        ),
         const SizedBox(height: 6),
         _buildInput(
           controller: _nameController,
@@ -962,7 +1285,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLabel('物品分类'),
+                  _buildLabel('物品分类', required: _selectedTemplate == 'none'),
                   const SizedBox(height: 6),
                   _buildSelectTrigger(
                     text: _selectedCategory ?? '选择分类',
@@ -1164,37 +1487,15 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   }
 
   Widget _buildDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 1.5),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _maintainCycle,
-          isExpanded: true,
-          icon: Icon(Icons.expand_more, size: 16, color: AppColors.textHint),
-          dropdownColor: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(12),
-          items: ['每月', '每季度', '每半年', '每年']
-              .map(
-                (v) => DropdownMenuItem(
-                  value: v,
-                  child: Text(
-                    v,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) => setState(() => _maintainCycle = v ?? '每半年'),
-        ),
-      ),
+    return AppDropdownButton<String>(
+      value: _maintainCycle,
+      items: const [
+        DropdownOption('每月', '每月'),
+        DropdownOption('每季度', '每季度'),
+        DropdownOption('每半年', '每半年'),
+        DropdownOption('每年', '每年'),
+      ],
+      onChanged: (v) => setState(() => _maintainCycle = v ?? '每半年'),
     );
   }
 
@@ -1294,7 +1595,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       ),
       child: Row(
         children: [
-          // 保存入库
+          // 保存入库 / 保存修改
           Expanded(
             child: GestureDetector(
               onTap: () => _saveItem(false),
@@ -1313,10 +1614,10 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
                     ),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    '保存入库',
-                    style: TextStyle(
+                    _isEdit ? '保存修改' : '保存入库',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -1326,31 +1627,33 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          // 保存并继续新增
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _saveItem(true),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: AppColors.cardBg,
-                  border: Border.all(color: AppColors.primary, width: 2),
-                ),
-                child: const Center(
-                  child: Text(
-                    '保存并继续新增',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryDark,
+          // 新增模式才显示“保存并继续新增”
+          if (!_isEdit) ...[
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _saveItem(true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: AppColors.cardBg,
+                    border: Border.all(color: AppColors.primary, width: 2),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '保存并继续新增',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1683,7 +1986,7 @@ class _PickerSheet extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(item.emoji, style: const TextStyle(fontSize: 24)),
+                        EmojiText(emoji: item.emoji, fontSize: 24),
                         const SizedBox(height: 6),
                         Text(
                           item.name,
@@ -1793,7 +2096,7 @@ class _LocationPickerSheet extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.all(40),
                       child: Text(
-                        '暂无柜体或格子\n请先在收纳页面添加',
+                        '暂无可用格子区域\n请先在收纳页面添加柜体和格子',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textHint,
@@ -1864,9 +2167,7 @@ class _LocationTile extends StatelessWidget {
                     : const Color(0xFFFFF3CC),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Center(
-                child: Text(node.emoji, style: const TextStyle(fontSize: 18)),
-              ),
+              child: Center(child: EmojiText(emoji: node.emoji, fontSize: 18)),
             ),
             const SizedBox(width: 12),
             // 路径信息
@@ -1895,31 +2196,144 @@ class _LocationTile extends StatelessWidget {
                 ],
               ),
             ),
-            // 选中标记 / 类型 chip
+            // 选中标记
             if (isSelected)
               const Icon(
                 Icons.check_circle,
                 color: AppColors.accentGold,
                 size: 20,
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.border.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  node.isSlot ? '格子' : '柜体',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ==================== 照片缩略图组件 ====================
+class _PhotoThumb extends StatelessWidget {
+  final PhotoEntry entry;
+  final bool isCover;
+  final VoidCallback onRemove;
+  final VoidCallback? onRetry;
+
+  const _PhotoThumb({
+    required this.entry,
+    required this.isCover,
+    required this.onRemove,
+    this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = entry.status == PhotoStatus.failed;
+    final uploading = entry.status == PhotoStatus.uploading;
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 图片
+          Image.file(
+            File(entry.path),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: AppColors.border,
+              child: const Icon(Icons.broken_image, color: AppColors.textHint),
+            ),
+          ),
+          // 上传中遮罩
+          if (uploading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.35),
+              child: const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          // 失败遮罩
+          if (failed)
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.55),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.white, size: 22),
+                    SizedBox(height: 2),
+                    Text(
+                      '点击重试',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // 删除按钮
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 12, color: Colors.white),
+              ),
+            ),
+          ),
+          // 封面标签
+          if (isCover)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.warning],
+                  ),
+                ),
+                child: const Text(
+                  '封面',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

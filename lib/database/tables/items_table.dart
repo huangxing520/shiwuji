@@ -13,6 +13,14 @@ class Items extends Table {
   TextColumn get categoryKey => text().withDefault(const Constant(''))();
   TextColumn get cabinetId => text().nullable()();
   TextColumn get slotId => text().nullable()();
+  // 照片路径列表（JSON 数组）
+  TextColumn get photos => text().withDefault(const Constant('[]'))();
+  // 品牌备注等扩展信息（支持编辑预填充）
+  TextColumn get brand => text().withDefault(const Constant(''))();
+  TextColumn get note => text().withDefault(const Constant(''))();
+  TextColumn get templateKey => text().withDefault(const Constant('none'))();
+  // 模板专属字段值（JSON 对象 {fieldId: value}）
+  TextColumn get templateData => text().withDefault(const Constant('{}'))();
 
   @override
   Set<Column> get primaryKey => {id};

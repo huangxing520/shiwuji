@@ -14,22 +14,6 @@ abstract class PickerItem with _$PickerItem {
       _$PickerItemFromJson(json);
 }
 
-/// 分类选项
-const List<PickerItem> categoryData = [
-  PickerItem(emoji: '📱', name: '数码'),
-  PickerItem(emoji: '🏠', name: '家电'),
-  PickerItem(emoji: '💄', name: '护肤'),
-  PickerItem(emoji: '🍚', name: '厨房'),
-  PickerItem(emoji: '👔', name: '衣物'),
-  PickerItem(emoji: '📚', name: '书籍'),
-  PickerItem(emoji: '📦', name: '收纳'),
-  PickerItem(emoji: '🧸', name: '玩具'),
-  PickerItem(emoji: '🏋️', name: '运动'),
-  PickerItem(emoji: '🎨', name: '文具'),
-  PickerItem(emoji: '🔑', name: '钥匙'),
-  PickerItem(emoji: '🔧', name: '工具'),
-];
-
 /// 位置选项
 const List<PickerItem> locationData = [
   PickerItem(emoji: '🛋️', name: '客厅'),

@@ -19,8 +19,7 @@ class ItemDao extends DatabaseAccessor<AppDatabase> with _$ItemDaoMixin {
 
   Future<int> insertItem(ItemsCompanion item) => into(items).insert(item);
 
-  Future<bool> updateItem(ItemsCompanion item) =>
-      update(items).replace(item);
+  Future<bool> updateItem(ItemsCompanion item) => update(items).replace(item);
 
   Future<int> deleteItem(String id) =>
       (delete(items)..where((t) => t.id.equals(id))).go();
@@ -42,8 +41,9 @@ class ItemDao extends DatabaseAccessor<AppDatabase> with _$ItemDaoMixin {
   }
 
   Future<int> countAll() async {
-    final result =
-        await customSelect('SELECT COUNT(*) AS total FROM items').get();
+    final result = await customSelect(
+      'SELECT COUNT(*) AS total FROM items',
+    ).get();
     return result.first.read<int>('total');
   }
 

@@ -48,10 +48,7 @@ class _QuickActionCardState extends State<QuickActionCard>
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     )..repeat(reverse: true);
-    _breathAnim = CurvedAnimation(
-      parent: _breathCtrl,
-      curve: Curves.easeInOut,
-    );
+    _breathAnim = CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut);
 
     Future.delayed(Duration(milliseconds: widget.delayMs), () {
       if (mounted) {
@@ -80,10 +77,7 @@ class _QuickActionCardState extends State<QuickActionCard>
         builder: (context, child) {
           return Opacity(
             opacity: _bounceAnim.value.clamp(0.0, 1.0),
-            child: Transform.scale(
-              scale: _bounceAnim.value,
-              child: child,
-            ),
+            child: Transform.scale(scale: _bounceAnim.value, child: child),
           );
         },
         child: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/models/platform_data.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
 /// Bottom sheet tutorial widget for a given platform.
 class PlatformTutorialSheet extends StatelessWidget {
@@ -34,10 +35,7 @@ class PlatformTutorialSheet extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      platform.emoji,
-                      style: const TextStyle(fontSize: 24),
-                    ),
+                    EmojiText(emoji: platform.emoji, fontSize: 24),
                     const SizedBox(width: 10),
                     Text(
                       '${platform.name}授权导入',
@@ -58,8 +56,11 @@ class PlatformTutorialSheet extends StatelessWidget {
                       color: AppColors.background,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close,
-                        size: 16, color: AppColors.textHint),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: AppColors.textHint,
+                    ),
                   ),
                 ),
               ],
@@ -97,9 +98,7 @@ class PlatformTutorialSheet extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    platform.connected
-                        ? '📱 重新授权并导入'
-                        : '🔑 授权并开始导入',
+                    platform.connected ? '📱 重新授权并导入' : '🔑 授权并开始导入',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/providers/category_provider.dart';
 import 'package:shi_wu_ji/models/category_item.dart';
@@ -806,10 +807,7 @@ class _CategoryCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
-                      child: Text(
-                        category.emoji,
-                        style: const TextStyle(fontSize: 24),
-                      ),
+                      child: EmojiText(emoji: category.emoji, fontSize: 24),
                     ),
                   ),
                   const SizedBox(width: 12),

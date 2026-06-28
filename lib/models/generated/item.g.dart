@@ -19,6 +19,17 @@ _Item _$ItemFromJson(Map<String, dynamic> json) => _Item(
   categoryKey: json['categoryKey'] as String? ?? '',
   cabinetId: json['cabinetId'] as String?,
   slotId: json['slotId'] as String?,
+  photos:
+      (json['photos'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
+  brand: json['brand'] as String? ?? '',
+  note: json['note'] as String? ?? '',
+  templateKey: json['templateKey'] as String? ?? 'none',
+  templateData:
+      (json['templateData'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ) ??
+      const {},
 );
 
 Map<String, dynamic> _$ItemToJson(_Item instance) => <String, dynamic>{
@@ -34,4 +45,9 @@ Map<String, dynamic> _$ItemToJson(_Item instance) => <String, dynamic>{
   'categoryKey': instance.categoryKey,
   'cabinetId': instance.cabinetId,
   'slotId': instance.slotId,
+  'photos': instance.photos,
+  'brand': instance.brand,
+  'note': instance.note,
+  'templateKey': instance.templateKey,
+  'templateData': instance.templateData,
 };

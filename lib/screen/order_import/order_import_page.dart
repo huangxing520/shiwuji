@@ -10,6 +10,7 @@ import 'package:shi_wu_ji/models/platform_data.dart';
 import 'package:shi_wu_ji/providers/import_providers.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
 import 'import_progress.dart';
 import 'platform_grid.dart';
@@ -76,12 +77,10 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
       vsync: this,
     );
     _platformCountAnim = IntTween(begin: 0, end: 8).animate(
-      CurvedAnimation(
-          parent: _heroAnimController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _heroAnimController, curve: Curves.easeOutCubic),
     );
     _importedCountAnim = IntTween(begin: 0, end: 1286).animate(
-      CurvedAnimation(
-          parent: _heroAnimController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _heroAnimController, curve: Curves.easeOutCubic),
     );
     _heroAnimController.forward();
 
@@ -94,13 +93,13 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
       parent: _configAnimController,
       curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
     );
-    _configSlideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _configAnimController,
-      curve: Curves.easeOutBack,
-    ));
+    _configSlideAnim =
+        Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _configAnimController,
+            curve: Curves.easeOutBack,
+          ),
+        );
 
     // Progress area animation
     _progressAnimController = AnimationController(
@@ -199,8 +198,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
     final importedItemModels = <Item>[];
 
     _importTimer?.cancel();
-    _importTimer =
-        Timer.periodic(const Duration(milliseconds: 350), (timer) {
+    _importTimer = Timer.periodic(const Duration(milliseconds: 350), (timer) {
       imported++;
 
       final orderIdx = (imported - 1) % mockOrders.length;
@@ -251,7 +249,9 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
           ref.read(itemsProvider.notifier).addItems(importedItemModels);
         }
         // Record this import in history
-        ref.read(importActionsProvider.notifier).recordImport(
+        ref
+            .read(importActionsProvider.notifier)
+            .recordImport(
               platformKey: _selectedPlatform!.key,
               emoji: _selectedPlatform!.emoji,
               title: '${_selectedPlatform!.name}订单导入',
@@ -504,10 +504,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                         label: '累计导入',
                       ),
                       const SizedBox(width: 20),
-                      _buildHeroStatStatic(
-                        value: '¥52.4w',
-                        label: '已管理资产',
-                      ),
+                      _buildHeroStatStatic(value: '¥52.4w', label: '已管理资产'),
                     ],
                   ),
                 ],
@@ -548,10 +545,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
     );
   }
 
-  Widget _buildHeroStatStatic({
-    required String value,
-    required String label,
-  }) {
+  Widget _buildHeroStatStatic({required String value, required String label}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -679,10 +673,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
         Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(
@@ -707,16 +698,12 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
           onTap: () => setState(() => _selectedTimeRange = range['key']!),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primaryLight
-                  : AppColors.background,
+              color: isSelected ? AppColors.primaryLight : AppColors.background,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color:
-                    isSelected ? AppColors.primary : AppColors.border,
+                color: isSelected ? AppColors.primary : AppColors.border,
                 width: 1.5,
               ),
             ),
@@ -758,8 +745,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
 
   Widget _buildDateInput(String defaultDate) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
@@ -767,8 +753,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
       ),
       child: Row(
         children: [
-          const Icon(Icons.calendar_today,
-              size: 14, color: AppColors.textHint),
+          const Icon(Icons.calendar_today, size: 14, color: AppColors.textHint),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -874,8 +859,8 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                   _isImporting
                       ? '导入中…'
                       : _importDone
-                          ? '再次导入'
-                          : '开始导入',
+                      ? '再次导入'
+                      : '开始导入',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -896,10 +881,11 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
         child: Center(
-            child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 2,
-        )),
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2,
+          ),
+        ),
       ),
       error: (_, _) => const SizedBox.shrink(),
       data: (records) {
@@ -913,10 +899,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
             child: const Center(
               child: Text(
                 '暂无导入记录',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textHint,
-                ),
+                style: TextStyle(fontSize: 13, color: AppColors.textHint),
               ),
             ),
           );
@@ -932,14 +915,15 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.cardBg,
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            AppColors.textPrimary.withValues(alpha: 0.06),
+                        color: AppColors.textPrimary.withValues(alpha: 0.06),
                         blurRadius: 12,
                         offset: const Offset(0, 2),
                       ),
@@ -956,18 +940,14 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Center(
-                          child: Text(
-                            record.emoji,
-                            style: const TextStyle(fontSize: 20),
-                          ),
+                          child: EmojiText(emoji: record.emoji, fontSize: 20),
                         ),
                       ),
                       const SizedBox(width: 12),
                       // Info
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               record.title,

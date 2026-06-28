@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/providers/profile_provider.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
 /// 头像 + 昵称卡片
 class ProfileHeaderSection extends ConsumerWidget {
@@ -62,12 +63,7 @@ class ProfileHeaderSection extends ConsumerWidget {
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Center(
-                  child: Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 32),
-                  ),
-                ),
+                child: Center(child: EmojiText(emoji: emoji, fontSize: 32)),
               ),
               const SizedBox(width: 16),
               // 信息

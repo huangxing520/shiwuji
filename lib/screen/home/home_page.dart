@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import 'package:shi_wu_ji/widgets/list_item_card.dart';
 import 'package:shi_wu_ji/models/enums/pending_card_type.dart';
 import 'package:shi_wu_ji/widgets/section_title.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
+import 'package:shi_wu_ji/providers/profile_provider.dart';
 import 'data_cards_section.dart';
 import 'recent_section.dart';
 
@@ -23,6 +25,15 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   bool _isRefreshing = false;
+  static const _bgAsset = 'assets/icon/background1.jpg';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 预加载背景图，避免页面渲染后再解码导致的闪烁
+    // 必须在 didChangeDependencies 中调用，因为 precacheImage 依赖 MediaQuery
+    precacheImage(AssetImage(_bgAsset), context);
+  }
 
   Future<void> _onRefresh() async {
     setState(() => _isRefreshing = true);
@@ -44,6 +55,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: Stack(
           children: [
             _buildBackgroundDecoration(),
+            _buildHeaderBackground(),
             SafeArea(
               child: Column(
                 children: [
@@ -51,11 +63,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: RefreshIndicator(
                       onRefresh: _onRefresh,
                       child: ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.only(top: 12, bottom: 12),
                         children: [
-                          _buildHeader(),
-                          const SizedBox(height: 4),
-                          _buildSearchBar(),
+                         
+                          _buildHeaderContent(),
                           const SizedBox(height: 16),
                           _buildDataCards(),
                           const SizedBox(height: 24),
@@ -88,6 +99,56 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderBackground() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 320,
+      child: Stack(
+        children: [
+          // 兜底背景色：图片解码完成前显示此颜色，避免闪烁
+          Positioned.fill(child: Container(color: AppColors.primaryLight)),
+          Positioned.fill(
+            child: Image.asset(
+              _bgAsset,
+              fit: BoxFit.fill,
+              // 图片解码完成后淡入显示，避免突然出现的闪烁
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                final loaded = wasSynchronouslyLoaded || frame != null;
+                return AnimatedOpacity(
+                  opacity: loaded ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  child: child,
+                );
+              },
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.background.withValues(alpha: 0.15),
+                    AppColors.background.withValues(alpha: 0.08),
+                    AppColors.background.withValues(alpha: 0.25),
+                    AppColors.background.withValues(alpha: 0.6),
+                    AppColors.background.withValues(alpha: 0.9),
+                    AppColors.background,
+                  ],
+                  stops: const [0.0, 0.15, 0.45, 0.7, 0.88, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -153,7 +214,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           Row(
             children: [
-              Icon(Icons.signal_cellular_alt, size: 16, color: AppColors.textPrimary),
+              Icon(
+                Icons.signal_cellular_alt,
+                size: 16,
+                color: AppColors.textPrimary,
+              ),
               SizedBox(width: 6),
               Icon(Icons.wifi, size: 16, color: AppColors.textPrimary),
               SizedBox(width: 6),
@@ -165,28 +230,51 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeaderContent() {
+    final profile = ref.watch(profileManagerProvider);
+    final nickname = profile.asData?.value['nickname'] ?? '小橘';
+    final hour = DateTime.now().hour;
+    final String greeting;
+    final String subtitle;
+    if (hour < 5) {
+      greeting = '凌晨好';
+      subtitle = '夜深了，注意休息';
+    } else if (hour < 11) {
+      greeting = '早上好';
+      subtitle = '新的一天，从整理开始';
+    } else if (hour < 13) {
+      greeting = '中午好';
+      subtitle = '午间时光，轻松盘点';
+    } else if (hour < 18) {
+      greeting = '傍晚好';
+      subtitle = '夕阳西下，整理收尾';
+    } else {
+      greeting = '晚上好';
+      subtitle = '晚安前，回顾今日';
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  '早上好，小橘 \u{1F31E}',
-                  style: TextStyle(
+                  '$greeting，$nickname',
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                     height: 1.2,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  '你的物品都在掌控中',
-                  style: TextStyle(
+                  subtitle,
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -195,104 +283,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
           const SizedBox(width: 12),
-          //_buildHeaderAction(Icons.notifications_none, badgeCount: 3),
-          //_buildHeaderAction(Icons.settings),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderAction(IconData icon, {int? badgeCount}) {
-    return GestureDetector(
-      onTap: () {
-        if (badgeCount != null) {
-          ToastUtils.show(context, '暂无新消息');
-        } else {
-          ToastUtils.show(context, '打开设置');
-        }
-      },
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(icon, color: AppColors.textSecondary, size: 20),
-              if (badgeCount != null)
-                Positioned(
-                  top: -6,
-                  right: -8,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: AppColors.danger,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.background, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$badgeCount',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
-        onTap: () => ToastUtils.show(context, '搜索物品、分类、收纳位置…'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.search, color: AppColors.textHint, size: 20),
-              SizedBox(width: 10),
-              Text(
-                '搜索物品、分类、收纳位置…',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textHint,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -315,23 +306,24 @@ class _HomePageState extends ConsumerState<HomePage> {
         crossAxisCount: 4,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
+        childAspectRatio: 0.75,
         children: [
-          QuickActionCard(
-            icon: Icons.download,
-            label: '一键导入',
-            startColor: AppColors.gradientGold,
-            endColor: AppColors.primary,
-            onTap: () => context.push('/order-import'),
-            delayMs: 50,
-          ),
-          QuickActionCard(
-            icon: Icons.add_circle,
-            label: '新增物品',
-            startColor: AppColors.gradientOrange,
-            endColor: AppColors.gradientOrangeEnd,
-            onTap: _handleAddTap,
-            delayMs: 120,
-          ),
+          // QuickActionCard(
+          //   icon: Icons.download,
+          //   label: '一键导入',
+          //   startColor: AppColors.gradientGold,
+          //   endColor: AppColors.primary,
+          //   onTap: () => context.push('/order-import'),
+          //   delayMs: 50,
+          // ),
+          // QuickActionCard(
+          //   icon: Icons.add_circle,
+          //   label: '新增物品',
+          //   startColor: AppColors.gradientOrange,
+          //   endColor: AppColors.gradientOrangeEnd,
+          //   onTap: _handleAddTap,
+          //   delayMs: 120,
+          // ),
           QuickActionCard(
             icon: Icons.grid_view,
             label: '分类管理',
@@ -367,7 +359,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 10),
           PendingCard(
-            title: '闲置物品',
+            title: '过保物品',
             desc: '已过保修期的物品',
             count: ref.watch(idleCountProvider).toString(),
             type: PendingCardType.returning,
@@ -392,5 +384,69 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
     context.go('/inventory');
   }
+}
 
+/// 打招呼的小猫小狗动画组件
+class _GreetingPet extends StatefulWidget {
+  const _GreetingPet();
+
+  @override
+  State<_GreetingPet> createState() => _GreetingPetState();
+}
+
+class _GreetingPetState extends State<_GreetingPet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _wave;
+  Timer? _swapTimer;
+  bool _showCat = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _wave = Tween<double>(
+      begin: 0.85,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _ctrl.repeat(reverse: true);
+    _swapTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) setState(() => _showCat = !_showCat);
+    });
+  }
+
+  @override
+  void dispose() {
+    _swapTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _wave,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _wave.value,
+          child: Transform.rotate(
+            angle: (_wave.value - 1.0) * 0.5,
+            child: child,
+          ),
+        );
+      },
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        switchInCurve: Curves.easeOutBack,
+        child: Text(
+          _showCat ? '🐱' : '🐶',
+          key: ValueKey(_showCat),
+          style: const TextStyle(fontSize: 32),
+        ),
+      ),
+    );
+  }
 }

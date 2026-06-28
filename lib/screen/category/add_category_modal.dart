@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 
 /// 分类编辑回调
-typedef CategoryModalCallback = void Function({
-  required String label,
-  required String emoji,
-});
+typedef CategoryModalCallback =
+    void Function({required String label, required String emoji});
 
 /// 新增/编辑分类模态框
 class AddCategoryModal extends StatefulWidget {
@@ -37,10 +36,38 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
   late TextEditingController _controller;
 
   static const _emojiOptions = [
-    '📱', '🏠', '💄', '🍚', '👔', '📚', '📦', '🧸',
-    '🏋️', '🎨', '🔑', '🔧', '🎮', '🎧', '💻', '📷',
-    '🍳', '🧹', '👟', '👜', '💊', '🎵', '🧴', '🪴',
-    '🐾', '🚗', '✈️', '🎁', '🏺', '🕯️', '🪑', '🛁',
+    '📱',
+    '🏠',
+    '💄',
+    '🍚',
+    '👔',
+    '📚',
+    '📦',
+    '🧸',
+    '🏋️',
+    '🎨',
+    '🔑',
+    '🔧',
+    '🎮',
+    '🎧',
+    '💻',
+    '📷',
+    '🍳',
+    '🧹',
+    '👟',
+    '👜',
+    '💊',
+    '🎵',
+    '🧴',
+    '🪴',
+    '🐾',
+    '🚗',
+    '✈️',
+    '🎁',
+    '🏺',
+    '🕯️',
+    '🪑',
+    '🛁',
   ];
 
   @override
@@ -161,16 +188,18 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFFFF3CC) : AppColors.background,
+                  color: isSelected
+                      ? const Color(0xFFFFF3CC)
+                      : AppColors.background,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected ? AppColors.accentGold : const Color(0xFFF0E4D0),
+                    color: isSelected
+                        ? AppColors.accentGold
+                        : const Color(0xFFF0E4D0),
                     width: 2,
                   ),
                 ),
-                child: Center(
-                  child: Text(icon, style: const TextStyle(fontSize: 24)),
-                ),
+                child: Center(child: EmojiText(emoji: icon, fontSize: 24)),
               ),
             );
           }).toList(),
@@ -209,15 +238,24 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
             fillColor: AppColors.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFF0E4D0), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFF0E4D0),
+                width: 1.5,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFF0E4D0), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFF0E4D0),
+                width: 1.5,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accentGold, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.accentGold,
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,

@@ -236,11 +236,8 @@ class _SplashPageState extends State<SplashPage> {
               style: AppTextStyles.labelLarge,
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            '拾物记 v1.0.0',
-            style: AppTextStyles.labelSmall,
-          ),
+         
+          
         ],
       ),
     );

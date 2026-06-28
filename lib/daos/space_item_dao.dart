@@ -28,4 +28,9 @@ class SpaceItemDao extends DatabaseAccessor<AppDatabase>
     return (update(spaceItems)..where((t) => t.id.isIn(itemIds)))
         .write(SpaceItemsCompanion(slotId: Value(newSlotId)));
   }
+
+  /// 批量删除物品
+  Future<int> deleteItems(List<int> itemIds) {
+    return (delete(spaceItems)..where((t) => t.id.isIn(itemIds))).go();
+  }
 }

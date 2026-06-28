@@ -3,10 +3,6 @@ import 'dart:ui';
 import 'package:drift/drift.dart' hide Column;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../database/database.dart' as db;
-import '../daos/room_dao.dart';
-import '../daos/cabinet_dao.dart';
-import '../daos/slot_dao.dart';
-import '../daos/space_item_dao.dart';
 import '../models/storage.dart' as model;
 import 'database_provider.dart';
 
@@ -23,16 +19,20 @@ Future<List<model.Room>> rooms(Ref ref) async {
   for (final row in rows) {
     final cabinetCount = await dao.cabinetCount(row.id);
     final itemCount = await dao.itemCount(row.id);
-    final occupation = cabinetCount > 0 ? (itemCount * 100 ~/ (cabinetCount * 10)) : 0;
-    result.add(model.Room(
-      id: row.id,
-      name: row.name,
-      emoji: row.emoji,
-      color: Color(row.color),
-      items: itemCount,
-      storageCount: cabinetCount,
-      occupation: occupation.clamp(0, 100),
-    ));
+    final occupation = cabinetCount > 0
+        ? (itemCount * 100 ~/ (cabinetCount * 10))
+        : 0;
+    result.add(
+      model.Room(
+        id: row.id,
+        name: row.name,
+        emoji: row.emoji,
+        color: Color(row.color),
+        items: itemCount,
+        storageCount: cabinetCount,
+        occupation: occupation.clamp(0, 100),
+      ),
+    );
   }
   return result;
 }
@@ -50,12 +50,34 @@ class RoomActions extends _$RoomActions {
     required Color color,
   }) async {
     final dao = ref.read(roomDaoProvider);
-    await dao.insertRoom(db.RoomsCompanion.insert(
-      id: id,
-      name: name,
-      emoji: emoji,
-      color: color.toARGB32(),
-    ));
+    await dao.insertRoom(
+      db.RoomsCompanion.insert(
+        id: id,
+        name: name,
+        emoji: emoji,
+        color: color.toARGB32(),
+      ),
+    );
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 更新房间
+  Future<void> updateRoom({
+    required String id,
+    required String name,
+    required String emoji,
+  }) async {
+    final dao = ref.read(roomDaoProvider);
+    await dao.updateRoom(
+      db.RoomsCompanion(id: Value(id), name: Value(name), emoji: Value(emoji)),
+    );
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 删除房间（级联删除其下柜体/格子/物品）
+  Future<void> deleteRoom(String id) async {
+    final dao = ref.read(roomDaoProvider);
+    await dao.deleteRoom(id);
     ref.invalidate(roomsProvider);
   }
 }
@@ -71,16 +93,20 @@ Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
   for (final row in rows) {
     final slotCount = await dao.slotCount(row.id);
     final itemCount = await dao.itemCount(row.id);
-    final occupation = slotCount > 0 ? (itemCount * 100 ~/ (slotCount * 10)) : 0;
-    result.add(model.Cabinet(
-      id: row.id,
-      name: row.name,
-      emoji: row.emoji,
-      color: Color(row.color),
-      items: itemCount,
-      occupation: occupation.clamp(0, 100),
-      hasPhoto: row.hasPhoto,
-    ));
+    final occupation = slotCount > 0
+        ? (itemCount * 100 ~/ (slotCount * 10))
+        : 0;
+    result.add(
+      model.Cabinet(
+        id: row.id,
+        name: row.name,
+        emoji: row.emoji,
+        color: Color(row.color),
+        items: itemCount,
+        occupation: occupation.clamp(0, 100),
+        hasPhoto: row.hasPhoto,
+      ),
+    );
   }
   return result;
 }
@@ -99,13 +125,42 @@ class CabinetActions extends _$CabinetActions {
     required String roomId,
   }) async {
     final dao = ref.read(cabinetDaoProvider);
-    await dao.insertCabinet(db.CabinetsCompanion.insert(
-      id: id,
-      name: name,
-      emoji: emoji,
-      color: color.toARGB32(),
-      roomId: roomId,
-    ));
+    await dao.insertCabinet(
+      db.CabinetsCompanion.insert(
+        id: id,
+        name: name,
+        emoji: emoji,
+        color: color.toARGB32(),
+        roomId: roomId,
+      ),
+    );
+    ref.invalidate(cabinetsByRoomProvider(roomId));
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 更新柜体
+  Future<void> updateCabinet({
+    required String id,
+    required String roomId,
+    required String name,
+    required String emoji,
+  }) async {
+    final dao = ref.read(cabinetDaoProvider);
+    await dao.updateCabinet(
+      db.CabinetsCompanion(
+        id: Value(id),
+        name: Value(name),
+        emoji: Value(emoji),
+      ),
+    );
+    ref.invalidate(cabinetsByRoomProvider(roomId));
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 删除柜体（级联删除其下格子/物品）
+  Future<void> deleteCabinet(String id, String roomId) async {
+    final dao = ref.read(cabinetDaoProvider);
+    await dao.deleteCabinet(id);
     ref.invalidate(cabinetsByRoomProvider(roomId));
     ref.invalidate(roomsProvider);
   }
@@ -121,14 +176,16 @@ Future<List<model.Slot>> slotsByCabinet(Ref ref, String cabinetId) async {
   final result = <model.Slot>[];
   for (final row in rows) {
     final itemCount = await dao.itemCount(row.id);
-    result.add(model.Slot(
-      id: row.id,
-      name: row.name,
-      emoji: row.emoji,
-      color: Color(row.color),
-      items: itemCount,
-      occupation: (itemCount * 10).clamp(0, 100),
-    ));
+    result.add(
+      model.Slot(
+        id: row.id,
+        name: row.name,
+        emoji: row.emoji,
+        color: Color(row.color),
+        items: itemCount,
+        occupation: (itemCount * 10).clamp(0, 100),
+      ),
+    );
   }
   return result;
 }
@@ -147,13 +204,38 @@ class SlotActions extends _$SlotActions {
     required String cabinetId,
   }) async {
     final dao = ref.read(slotDaoProvider);
-    await dao.insertSlot(db.SlotsCompanion.insert(
-      id: id,
-      name: name,
-      emoji: emoji,
-      color: color.toARGB32(),
-      cabinetId: cabinetId,
-    ));
+    await dao.insertSlot(
+      db.SlotsCompanion.insert(
+        id: id,
+        name: name,
+        emoji: emoji,
+        color: color.toARGB32(),
+        cabinetId: cabinetId,
+      ),
+    );
+    ref.invalidate(slotsByCabinetProvider(cabinetId));
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 更新格子
+  Future<void> updateSlot({
+    required String id,
+    required String cabinetId,
+    required String name,
+    required String emoji,
+  }) async {
+    final dao = ref.read(slotDaoProvider);
+    await dao.updateSlot(
+      db.SlotsCompanion(id: Value(id), name: Value(name), emoji: Value(emoji)),
+    );
+    ref.invalidate(slotsByCabinetProvider(cabinetId));
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 删除格子（级联删除其下物品）
+  Future<void> deleteSlot(String id, String cabinetId) async {
+    final dao = ref.read(slotDaoProvider);
+    await dao.deleteSlot(id);
     ref.invalidate(slotsByCabinetProvider(cabinetId));
     ref.invalidate(roomsProvider);
   }
@@ -166,11 +248,14 @@ Future<List<model.SpaceItem>> spaceItemsBySlot(Ref ref, String slotId) async {
   final dao = ref.watch(spaceItemDaoProvider);
   final rows = await dao.getBySlot(slotId);
   return rows
-      .map((row) => model.SpaceItem(
-            emoji: row.emoji,
-            name: row.name,
-            meta: row.meta,
-          ))
+      .map(
+        (row) => model.SpaceItem(
+          id: row.id,
+          emoji: row.emoji,
+          name: row.name,
+          meta: row.meta,
+        ),
+      )
       .toList();
 }
 
@@ -187,12 +272,14 @@ class SpaceItemActions extends _$SpaceItemActions {
     required String slotId,
   }) async {
     final dao = ref.read(spaceItemDaoProvider);
-    await dao.insertSpaceItem(db.SpaceItemsCompanion.insert(
-      emoji: emoji,
-      name: name,
-      meta: meta,
-      slotId: slotId,
-    ));
+    await dao.insertSpaceItem(
+      db.SpaceItemsCompanion.insert(
+        emoji: emoji,
+        name: name,
+        meta: meta,
+        slotId: slotId,
+      ),
+    );
     ref.invalidate(spaceItemsBySlotProvider(slotId));
     ref.invalidate(roomsProvider);
   }
@@ -200,6 +287,14 @@ class SpaceItemActions extends _$SpaceItemActions {
   Future<void> migrateItems(List<int> itemIds, String newSlotId) async {
     final dao = ref.read(spaceItemDaoProvider);
     await dao.migrateToSlot(itemIds, newSlotId);
+    ref.invalidate(roomsProvider);
+  }
+
+  /// 批量删除物品
+  Future<void> deleteItems(List<int> itemIds, String slotId) async {
+    final dao = ref.read(spaceItemDaoProvider);
+    await dao.deleteItems(itemIds);
+    ref.invalidate(spaceItemsBySlotProvider(slotId));
     ref.invalidate(roomsProvider);
   }
 }
@@ -219,11 +314,7 @@ Future<Map<String, int>> storageStats(Ref ref) async {
     totalItems += await roomDao.itemCount(room.id);
   }
 
-  return {
-    'rooms': totalRooms,
-    'cabinets': totalCabinets,
-    'items': totalItems,
-  };
+  return {'rooms': totalRooms, 'cabinets': totalCabinets, 'items': totalItems};
 }
 
 // ─── 收纳位置选择树（供新增/编辑物品选位置用） ─────────
@@ -249,9 +340,8 @@ class StorageLocationNode {
   });
 
   /// 显示用路径标签：柜体 → "房间 / 柜体"；格子 → "房间 / 柜体 / 格子"
-  String get pathLabel => isSlot
-      ? '$roomName / $cabinetName / $name'
-      : '$roomName / $name';
+  String get pathLabel =>
+      isSlot ? '$roomName / $cabinetName / $name' : '$roomName / $name';
 }
 
 /// 查询所有柜体+格子，扁平化为节点列表（供选择器使用）
@@ -268,27 +358,31 @@ Future<List<StorageLocationNode>> storageLocationTree(Ref ref) async {
     final cabinets = await cabinetDao.getByRoom(room.id);
     for (final cab in cabinets) {
       // 柜体节点
-      nodes.add(StorageLocationNode(
-        id: cab.id,
-        name: cab.name,
-        emoji: cab.emoji,
-        isSlot: false,
-        cabinetId: cab.id,
-        cabinetName: cab.name,
-        roomName: room.name,
-      ));
-      // 格子节点
-      final slots = await slotDao.getByCabinet(cab.id);
-      for (final slot in slots) {
-        nodes.add(StorageLocationNode(
-          id: slot.id,
-          name: slot.name,
-          emoji: slot.emoji,
-          isSlot: true,
+      nodes.add(
+        StorageLocationNode(
+          id: cab.id,
+          name: cab.name,
+          emoji: cab.emoji,
+          isSlot: false,
           cabinetId: cab.id,
           cabinetName: cab.name,
           roomName: room.name,
-        ));
+        ),
+      );
+      // 格子节点
+      final slots = await slotDao.getByCabinet(cab.id);
+      for (final slot in slots) {
+        nodes.add(
+          StorageLocationNode(
+            id: slot.id,
+            name: slot.name,
+            emoji: slot.emoji,
+            isSlot: true,
+            cabinetId: cab.id,
+            cabinetName: cab.name,
+            roomName: room.name,
+          ),
+        );
       }
     }
   }

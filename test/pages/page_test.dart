@@ -24,8 +24,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
-      expect(find.text('早上好，小橘 🌞'), findsOneWidget);
-      expect(find.text('你的物品都在掌控中'), findsOneWidget);
+      // 问候语根据时间动态变化，使用默认昵称"小橘"
+      expect(find.textContaining('小橘'), findsOneWidget);
     });
 
     testWidgets('renders data card labels', (tester) async {
@@ -45,9 +45,8 @@ void main() {
       await tester.pump();
 
       expect(find.text('物品总数'), findsOneWidget);
-      expect(find.text('闲置物品'), findsOneWidget);
+      expect(find.text('过保物品'), findsOneWidget);
     });
-
   });
 
   group('AddItemPage', () {
@@ -62,8 +61,9 @@ void main() {
       expect(find.text('保存入库'), findsOneWidget);
     });
 
-    testWidgets('shows validation error when saving empty form',
-        (tester) async {
+    testWidgets('shows validation error when saving empty form', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const ProviderScope(child: MaterialApp(home: AddItemPage())),
       );

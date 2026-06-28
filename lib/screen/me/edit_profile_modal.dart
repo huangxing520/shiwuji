@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 
 /// 编辑资料回调
-typedef ProfileModalCallback = void Function({
-  required String nickname,
-  required String emoji,
-});
+typedef ProfileModalCallback =
+    void Function({required String nickname, required String emoji});
 
 /// 编辑头像/昵称模态框
 class EditProfileModal extends StatefulWidget {
@@ -33,11 +32,36 @@ class _EditProfileModalState extends State<EditProfileModal> {
   late TextEditingController _controller;
 
   static const _emojiOptions = [
-    '🧑', '👩', '👨', '🧒', '👧', '👦',
-    '🐱', '🐶', '🦊', '🐻', '🐼', '🐨',
-    '🌸', '🌻', '🍀', '⭐', '🌙', '🔥',
-    '🎮', '🎵', '📷', '💻', '🎨', '🚀',
-    '🏠', '🌈', '☕', '🍰', '🎁', '🦋',
+    '🧑',
+    '👩',
+    '👨',
+    '🧒',
+    '👧',
+    '👦',
+    '🐱',
+    '🐶',
+    '🦊',
+    '🐻',
+    '🐼',
+    '🐨',
+    '🌸',
+    '🌻',
+    '🍀',
+    '⭐',
+    '🌙',
+    '🔥',
+    '🎮',
+    '🎵',
+    '📷',
+    '💻',
+    '🎨',
+    '🚀',
+    '🏠',
+    '🌈',
+    '☕',
+    '🍰',
+    '🎁',
+    '🦋',
   ];
 
   @override
@@ -158,16 +182,18 @@ class _EditProfileModalState extends State<EditProfileModal> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFFFF3CC) : AppColors.background,
+                  color: isSelected
+                      ? const Color(0xFFFFF3CC)
+                      : AppColors.background,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected ? AppColors.accentGold : const Color(0xFFF0E4D0),
+                    color: isSelected
+                        ? AppColors.accentGold
+                        : const Color(0xFFF0E4D0),
                     width: 2,
                   ),
                 ),
-                child: Center(
-                  child: Text(e, style: const TextStyle(fontSize: 24)),
-                ),
+                child: Center(child: EmojiText(emoji: e, fontSize: 24)),
               ),
             );
           }).toList(),
@@ -206,15 +232,24 @@ class _EditProfileModalState extends State<EditProfileModal> {
             fillColor: AppColors.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFF0E4D0), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFF0E4D0),
+                width: 1.5,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFF0E4D0), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFF0E4D0),
+                width: 1.5,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accentGold, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.accentGold,
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,

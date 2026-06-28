@@ -10,23 +10,29 @@ part of '../item_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// 跨页面共享的"待选分类"——例如从分类管理页跳转到物品库时，传递需要选中的分类 key。
 /// 读取方应用后应清空，避免下次进入时重复生效。
+/// 使用 keepAlive 是因为：设置方（来源页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 
 @ProviderFor(PendingCategory)
 final pendingCategoryProvider = PendingCategoryProvider._();
 
 /// 跨页面共享的"待选分类"——例如从分类管理页跳转到物品库时，传递需要选中的分类 key。
 /// 读取方应用后应清空，避免下次进入时重复生效。
+/// 使用 keepAlive 是因为：设置方（来源页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 final class PendingCategoryProvider
     extends $NotifierProvider<PendingCategory, String?> {
   /// 跨页面共享的"待选分类"——例如从分类管理页跳转到物品库时，传递需要选中的分类 key。
   /// 读取方应用后应清空，避免下次进入时重复生效。
+  /// 使用 keepAlive 是因为：设置方（来源页）只用 ref.read 写入、不监听，
+  /// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
   PendingCategoryProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'pendingCategoryProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -47,10 +53,12 @@ final class PendingCategoryProvider
   }
 }
 
-String _$pendingCategoryHash() => r'6198fe60f683998073d1412bb4c5504b96224c0b';
+String _$pendingCategoryHash() => r'aeb0c963feb512833652ef08ed57dda83af77fe7';
 
 /// 跨页面共享的"待选分类"——例如从分类管理页跳转到物品库时，传递需要选中的分类 key。
 /// 读取方应用后应清空，避免下次进入时重复生效。
+/// 使用 keepAlive 是因为：设置方（来源页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 
 abstract class _$PendingCategory extends $Notifier<String?> {
   String? build();
@@ -71,21 +79,27 @@ abstract class _$PendingCategory extends $Notifier<String?> {
 }
 
 /// 跨页面共享的"待选状态筛选"——从首页待处理事项跳转到物品库时，传递需要筛选的状态。
+/// 使用 keepAlive 是因为：设置方（首页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 
 @ProviderFor(PendingStatusFilter)
 final pendingStatusFilterProvider = PendingStatusFilterProvider._();
 
 /// 跨页面共享的"待选状态筛选"——从首页待处理事项跳转到物品库时，传递需要筛选的状态。
+/// 使用 keepAlive 是因为：设置方（首页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 final class PendingStatusFilterProvider
     extends $NotifierProvider<PendingStatusFilter, String?> {
   /// 跨页面共享的"待选状态筛选"——从首页待处理事项跳转到物品库时，传递需要筛选的状态。
+  /// 使用 keepAlive 是因为：设置方（首页）只用 ref.read 写入、不监听，
+  /// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
   PendingStatusFilterProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'pendingStatusFilterProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -107,9 +121,11 @@ final class PendingStatusFilterProvider
 }
 
 String _$pendingStatusFilterHash() =>
-    r'3a5500e80c4e17d2d90d36e183ac364244122cf2';
+    r'750e79178b8852ad326fd24c908f34849c88ad7b';
 
 /// 跨页面共享的"待选状态筛选"——从首页待处理事项跳转到物品库时，传递需要筛选的状态。
+/// 使用 keepAlive 是因为：设置方（首页）只用 ref.read 写入、不监听，
+/// autoDispose 会在写入后立即销毁 provider，导致目标页 initState 读到 null。
 
 abstract class _$PendingStatusFilter extends $Notifier<String?> {
   String? build();
@@ -156,7 +172,7 @@ final class ItemsProvider extends $AsyncNotifierProvider<Items, List<Item>> {
   Items create() => Items();
 }
 
-String _$itemsHash() => r'dd6fa59713e853c3f5a455a20637b2a645e8a714';
+String _$itemsHash() => r'c90c76bb477ff10466ab546a98de407e19ac3d11';
 
 /// 核心 Items Provider —— AsyncNotifier，从数据库读写
 

@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 import '../constants/app_dimensions.dart';
 import 'card_container.dart';
+import 'emoji_text.dart';
 
 /// 倒计时卡片 — 质保 / 维护倒计时
 class CountdownCard extends StatelessWidget {
@@ -29,7 +30,7 @@ class CountdownCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppDimensions.cardPadding),
         child: Column(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 24)),
+            EmojiText(emoji: icon, fontSize: 24),
             const SizedBox(height: 6),
             Text(label, style: AppTextStyles.labelMedium),
             const SizedBox(height: 4),

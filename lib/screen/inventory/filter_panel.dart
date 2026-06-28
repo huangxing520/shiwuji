@@ -130,10 +130,10 @@ class _FilterPanelState extends State<FilterPanel> {
               onSelect: (v) => setState(() => _selectedLocation = v),
             ),
             const SizedBox(height: 16),
-            // Status（对齐真实数据：safe / underWarranty / expiring / idle）
+            // Status（对齐真实数据：underWarranty / expiring / idle）
             _buildFilterSection(
               label: '物品状态',
-              options: ['全部', '安全', '在保', '即将到期', '闲置'],
+              options: ['全部', '在保', '即将到期', '过保'],
               selected: _selectedStatus,
               onSelect: (v) => setState(() => _selectedStatus = v),
             ),

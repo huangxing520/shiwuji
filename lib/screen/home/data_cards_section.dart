@@ -26,6 +26,7 @@ class DataCardsSection extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
+        childAspectRatio: 0.8,
         children: [
           DataCard(
             icon: Icons.inventory,
@@ -70,7 +71,7 @@ class DataCardsSection extends StatelessWidget {
             icon: Icons.archive,
             target: idleCount,
             unit: '件',
-            label: '闲置物品',
+            label: '过保物品',
             trendLabel: '建议处理',
             trendUp: false,
             color: AppColors.success,

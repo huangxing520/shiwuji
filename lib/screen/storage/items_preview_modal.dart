@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/storage.dart';
-import '../../widgets/toast_utils.dart';
+import '../../widgets/emoji_text.dart';
 
-/// 物品预览模态框 — 展示某个格子/区域内的物品列表，支持批量选择迁移
+/// 物品预览模态框 — 展示某个格子/区域内的物品列表，支持批量迁移与批量删除
 class ItemsPreviewModal extends StatelessWidget {
   final String title;
   final List<SpaceItem> items;
-  final Set<String> selectedItemIds;
+  final Set<int> selectedItemIds; // 使用数据库 id
   final VoidCallback onClose;
-  final ValueChanged<String> onToggleItem;
+  final ValueChanged<int> onToggleItem;
   final VoidCallback onBatchMigrate;
+  final VoidCallback onBatchDelete;
 
   const ItemsPreviewModal({
     super.key,
@@ -20,10 +21,15 @@ class ItemsPreviewModal extends StatelessWidget {
     required this.onClose,
     required this.onToggleItem,
     required this.onBatchMigrate,
+    required this.onBatchDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    // 严格限制浮层最高高度为当前屏幕高度的 50%
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final maxSheetHeight = screenHeight * 0.5;
+
     return Positioned.fill(
       child: GestureDetector(
         onTap: onClose,
@@ -34,8 +40,8 @@ class ItemsPreviewModal extends StatelessWidget {
             child: Align(
               alignment: Alignment.bottomCenter,
               child: Container(
-                constraints: const BoxConstraints(maxHeight: 720),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                constraints: BoxConstraints(maxHeight: maxSheetHeight),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -43,84 +49,165 @@ class ItemsPreviewModal extends StatelessWidget {
                     topRight: Radius.circular(24),
                   ),
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 头部
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 头部
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
                             title,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
                               color: AppColors.textPrimary,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          GestureDetector(
-                            onTap: onClose,
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                shape: BoxShape.circle,
+                        ),
+                        GestureDetector(
+                          onTap: onClose,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (selectedItemIds.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '已选 ${selectedItemIds.length} 项',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.accentGold,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    // 物品列表（可滚动，受 maxHeight 约束）
+                    Flexible(
+                      child: items.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 32),
+                                child: Text(
+                                  '该格子暂无物品',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textHint,
+                                  ),
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 16,
-                                color: AppColors.textHint,
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: items.length,
+                              itemBuilder: (ctx, i) {
+                                final item = items[i];
+                                final isSelected = selectedItemIds.contains(
+                                  item.id,
+                                );
+                                return _buildItemListTile(item, isSelected);
+                              },
+                            ),
+                    ),
+                    // 批量操作按钮
+                    if (selectedItemIds.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          // 批量迁移
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: onBatchMigrate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [AppColors.info, Color(0xFF7AB8FF)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0x405B9BFF),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '批量迁移',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // 批量删除
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: onBatchDelete,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      AppColors.danger,
+                                      Color(0xFFE57373),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0x40E57373),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '批量删除',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-                      // 物品列表
-                      ...(items.asMap().entries.map((entry) {
-                        final i = entry.key;
-                        final item = entry.value;
-                        final isSelected = selectedItemIds.contains('$i');
-                        return _buildItemListTile(item, '$i', isSelected);
-                      })),
-                      if (selectedItemIds.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        GestureDetector(
-                          onTap: onBatchMigrate,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.info, Color(0xFF7AB8FF)],
-                              ),
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0x405B9BFF),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Text(
-                                '批量迁移选中物品',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -130,9 +217,9 @@ class ItemsPreviewModal extends StatelessWidget {
     );
   }
 
-  Widget _buildItemListTile(SpaceItem item, String id, bool isSelected) {
+  Widget _buildItemListTile(SpaceItem item, bool isSelected) {
     return GestureDetector(
-      onTap: () => onToggleItem(id),
+      onTap: () => onToggleItem(item.id),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: const BoxDecoration(
@@ -149,9 +236,7 @@ class ItemsPreviewModal extends StatelessWidget {
                 color: const Color(0xFFFFF3CC),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
-                child: Text(item.emoji, style: const TextStyle(fontSize: 20)),
-              ),
+              child: Center(child: EmojiText(emoji: item.emoji, fontSize: 20)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -173,6 +258,8 @@ class ItemsPreviewModal extends StatelessWidget {
                       fontSize: 11,
                       color: AppColors.textHint,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

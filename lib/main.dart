@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 import 'services/notification_service.dart';
@@ -9,6 +10,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerPackageInfoPlus();
   await NotificationService().init();
+  // 预加载首页背景图，避免首次渲染时闪烁
+  await rootBundle.load('assets/icon/background1.jpg');
   runApp(ProviderScope(child: MyApp()));
 }
 

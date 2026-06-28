@@ -12,6 +12,7 @@ import 'package:shi_wu_ji/screen/me_page.dart';
 import 'package:shi_wu_ji/screen/me/data_backup_page.dart';
 import 'package:shi_wu_ji/screen/me/notification_settings_page.dart';
 import 'package:shi_wu_ji/screen/me/check_update_page.dart';
+import 'package:shi_wu_ji/screen/scan/scan_page.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -20,6 +21,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/add_item',
       builder: (context, state) => const AddItemPage(),
+    ),
+    GoRoute(
+      path: '/edit_item/:id',
+      builder: (context, state) =>
+          AddItemPage(itemId: state.pathParameters['id']),
     ),
     GoRoute(
       path: '/order-import',
@@ -41,6 +47,7 @@ final appRouter = GoRouter(
       path: '/check-update',
       builder: (context, state) => const CheckUpdatePage(),
     ),
+    GoRoute(path: '/scan', builder: (context, state) => const ScanPage()),
     GoRoute(
       path: '/detail/:id',
       builder: (context, state) =>

@@ -1,15 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/constants/app_dimensions.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
+import 'package:shi_wu_ji/widgets/emoji_text.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/models/item.dart';
-import 'package:shi_wu_ji/models/inventory_item.dart';
+import 'package:shi_wu_ji/models/category.dart';
 import 'package:shi_wu_ji/models/enums/item_status.dart';
 import 'package:shi_wu_ji/models/enums/sort_type.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
+import 'package:shi_wu_ji/providers/category_provider.dart';
 import 'package:shi_wu_ji/screen/inventory/sort_dropdown.dart';
 import 'package:shi_wu_ji/screen/inventory/filter_panel.dart';
 
@@ -55,16 +58,38 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   bool _sortDropdownOpen = false;
 
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   // ── 筛选面板 ──
   String? _selectedPriceRange;
   String? _selectedLocation;
   String? _selectedStatus;
 
+  // 标记本次 pending 分类是否已被消费，避免 build 多次触发时重复应用
+  bool _pendingCategoryApplied = false;
+
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  /// 重置除 _activeCategory 之外的所有筛选/排序/选择/滚动状态
+  /// 用于从分类页跳转过来时，清除上一次留下的选择状态
+  void _resetSecondaryState() {
+    _searchQuery = '';
+    _searchController.clear();
+    _selectedPriceRange = null;
+    _selectedLocation = null;
+    _selectedStatus = null;
+    _sortType = SortType.newest;
+    _sortDropdownOpen = false;
+    _batchMode = false;
+    _selectedIds.clear();
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   @override
@@ -78,14 +103,16 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     String? pendingStatus = ref.read(pendingStatusFilterProvider);
 
     if (pendingCat != null) {
+      _resetSecondaryState();
       _activeCategory = pendingCat;
+      // 标记已消费，避免紧随其后的 build 重复 reset
+      _pendingCategoryApplied = true;
     }
     if (pendingStatus != null) {
       const statusMap = {
         'expiring': '即将到期',
-        'idle': '闲置',
+        'idle': '过保',
         'underWarranty': '在保',
-        'safe': '安全',
       };
       final label = statusMap[pendingStatus];
       if (label != null) {
@@ -107,33 +134,15 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   // Status helpers
   // ───────────────────────────────────────────
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'safe':
-        return '安全';
-      case 'expiring':
+  /// 由 ItemStatus 枚举转中文文案
+  String _statusLabelFromEnum(ItemStatus s) {
+    switch (s) {
+      case ItemStatus.expiring:
         return '即将到期';
-      case 'idle':
-        return '闲置';
-      case 'underWarranty':
+      case ItemStatus.idle:
+        return '过保';
+      case ItemStatus.underWarranty:
         return '在保';
-      default:
-        return '安全';
-    }
-  }
-
-  ItemStatus _toItemStatus(String status) {
-    switch (status) {
-      case 'safe':
-        return ItemStatus.safe;
-      case 'expiring':
-        return ItemStatus.expiring;
-      case 'idle':
-        return ItemStatus.idle;
-      case 'underWarranty':
-        return ItemStatus.underWarranty;
-      default:
-        return ItemStatus.safe;
     }
   }
 
@@ -193,17 +202,18 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
               .where((i) => i.location.contains(_selectedLocation!))
               .toList();
         }
-        // 物品状态筛选
+        // 物品状态筛选（基于日期实时计算的 warrantyStatus，避免与静态 status 字段冲突）
         if (_selectedStatus != null && _selectedStatus != '全部') {
-          const statusKey = {
-            '安全': 'safe',
-            '在保': 'underWarranty',
-            '即将到期': 'expiring',
-            '闲置': 'idle',
+          final statusKey = {
+            '在保': ItemStatus.underWarranty,
+            '即将到期': ItemStatus.expiring,
+            '过保': ItemStatus.idle,
           };
-          final key = statusKey[_selectedStatus!];
-          if (key != null) {
-            filtered = filtered.where((i) => i.status == key).toList();
+          final target = statusKey[_selectedStatus!];
+          if (target != null) {
+            filtered = filtered
+                .where((i) => i.warrantyStatus == target)
+                .toList();
           }
         }
         switch (_sortType) {
@@ -294,14 +304,23 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     // 必须用 watch 让 provider 变化时强制 rebuild，才能读到其他页面设置的值。
     final pending = ref.watch(pendingCategoryProvider);
     if (pending != null) {
-      if (pending != _activeCategory) {
+      // _pendingCategoryApplied 用于防止 build 多次触发时重复 reset：
+      // - initState 已消费过 pending：标记为 true，build 跳过
+      // - 同一 pending 值触发第二次 build：跳过
+      // - 新一次跳转（pending 重新被设置）：applied 已在 provider 清空时重置为 false，正常应用
+      if (!_pendingCategoryApplied) {
+        _resetSecondaryState();
         _activeCategory = pending;
+        _pendingCategoryApplied = true;
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ref.read(pendingCategoryProvider.notifier).set(null);
         }
       });
+    } else {
+      // pending 已被清空，重置标记，为下一次跳转做准备
+      _pendingCategoryApplied = false;
     }
 
     // 监听来自首页的状态筛选请求
@@ -309,9 +328,8 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     if (pendingStatus != null) {
       const statusMap = {
         'expiring': '即将到期',
-        'idle': '闲置',
+        'idle': '过保',
         'underWarranty': '在保',
-        'safe': '安全',
       };
       final label = statusMap[pendingStatus];
       if (label != null && _selectedStatus != label) {
@@ -346,6 +364,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                     _buildCategoryTabs(),
                     const SizedBox(height: 12),
                     _buildFilterBar(),
+                    const SizedBox(height: 4),
                     Expanded(child: _buildListArea(items)),
                   ],
                 ),
@@ -374,6 +393,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
           color: AppColors.primary,
           onRefresh: _onRefresh,
           child: CustomScrollView(
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               // 结果计数
@@ -520,6 +540,16 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   // ─── Category Tabs ─────────────────────────
 
   Widget _buildCategoryTabs() {
+    // 从 provider 动态读取分类列表：数据库分类 + 虚拟物品分类
+    // 用户在分类管理页的新增/编辑/删除会实时反映到此处
+    final dynamicCats = ref.watch(availableCategoriesProvider);
+    // 「全部」固定在最前；其后跟随动态分类
+    final tabs = <Category>[const Category('all', '全部'), ...dynamicCats];
+    // 防御：若当前选中的分类已不存在（被用户删除），回退到「全部」
+    if (_activeCategory != 'all' &&
+        !tabs.any((c) => c.key == _activeCategory)) {
+      _activeCategory = 'all';
+    }
     return SizedBox(
       height: 36,
       child: ListView.separated(
@@ -527,10 +557,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.pageMarginHorizontal,
         ),
-        itemCount: Category.all.length,
+        itemCount: tabs.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final cat = Category.all[index];
+          final cat = tabs[index];
           final isActive = _activeCategory == cat.key;
           return GestureDetector(
             onTap: () => _onCategoryChanged(cat.key),
@@ -759,9 +789,29 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     );
   }
 
+  /// 物品缩略图：有照片时优先展示第一张（铺满父容器），无照片回退到 emoji。
+  /// 父容器需已提供尺寸约束；emoji 场景依赖父容器的背景色。
+  /// 图片加载失败（文件丢失/损坏）时自动回退 emoji，保证始终有显示。
+  Widget _buildThumb(Item item, {required double emojiSize}) {
+    final emoji = item.emoji.isNotEmpty ? item.emoji : '📦';
+    if (item.photos.isNotEmpty) {
+      return SizedBox.expand(
+        child: Image.file(
+          File(item.photos.first),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Center(
+            child: EmojiText(emoji: emoji, fontSize: emojiSize),
+          ),
+        ),
+      );
+    }
+    return Center(
+      child: EmojiText(emoji: emoji, fontSize: emojiSize),
+    );
+  }
+
   Widget _buildGridCard(Item item, int index) {
     final isSelected = _selectedIds.contains(item.id);
-    final emoji = item.emoji.isNotEmpty ? item.emoji : '📦';
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 400 + index * 50),
@@ -800,16 +850,11 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                 flex: 5,
                 child: Stack(
                   children: [
-                    // Emoji 背景
+                    // 图片/Emoji 背景
                     Container(
                       width: double.infinity,
                       color: AppColors.accentLightBg,
-                      child: Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 44),
-                        ),
-                      ),
+                      child: _buildThumb(item, emojiSize: 44),
                     ),
                     // 批量选择圆圈
                     if (_batchMode)
@@ -873,6 +918,8 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                       const SizedBox(height: 4),
                       Text(
                         '${item.category} · ${item.location}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textHint,
@@ -912,7 +959,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
 
   Widget _buildListCard(Item item, int index) {
     final isSelected = _selectedIds.contains(item.id);
-    final emoji = item.emoji.isNotEmpty ? item.emoji : '📦';
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 350 + index * 50),
@@ -953,9 +999,8 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                       color: AppColors.accentLightBg,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Center(
-                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
-                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _buildThumb(item, emojiSize: 28),
                   ),
                   if (_batchMode)
                     Positioned(
@@ -1017,11 +1062,15 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          item.location,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textHint,
+                        Flexible(
+                          child: Text(
+                            item.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textHint,
+                            ),
                           ),
                         ),
                       ],
@@ -1048,17 +1097,13 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   // ─── 通用组件 ──────────────────────────────
 
   Widget _buildStatusBadge(Item item, {bool isSmall = false}) {
-    final itemStatus = _toItemStatus(item.status);
+    final itemStatus = item.warrantyStatus;
     Color bgColor;
     Color textColor;
     switch (itemStatus) {
       case ItemStatus.expiring:
         bgColor = AppColors.dangerLight;
         textColor = AppColors.danger;
-        break;
-      case ItemStatus.safe:
-        bgColor = AppColors.successLight;
-        textColor = AppColors.statusUsing;
         break;
       case ItemStatus.idle:
         bgColor = AppColors.warningLight;
@@ -1079,7 +1124,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
         borderRadius: BorderRadius.circular(isSmall ? 10 : 12),
       ),
       child: Text(
-        _statusLabel(item.status),
+        _statusLabelFromEnum(itemStatus),
         style: TextStyle(
           fontSize: isSmall ? 10 : 10,
           fontWeight: FontWeight.w700,

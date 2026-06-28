@@ -76,7 +76,7 @@ final class RoomActionsProvider
   RoomActions create() => RoomActions();
 }
 
-String _$roomActionsHash() => r'15d36d7da8d16b3f50053cba25d8a8aeb4f86204';
+String _$roomActionsHash() => r'bf8197a19fbec64df97d1a7f93082ba8b3f72ae8';
 
 /// 新增房间
 
@@ -203,7 +203,7 @@ final class CabinetActionsProvider
   CabinetActions create() => CabinetActions();
 }
 
-String _$cabinetActionsHash() => r'49410f7cfd52cde81c52fc20a3998bd1b7cee6aa';
+String _$cabinetActionsHash() => r'9cd888ed9834f7e12a738391ae4b8786aee9784a';
 
 /// 新增柜子
 
@@ -328,7 +328,7 @@ final class SlotActionsProvider
   SlotActions create() => SlotActions();
 }
 
-String _$slotActionsHash() => r'1e91282f35c1f6c26e9006e7626752815d43c880';
+String _$slotActionsHash() => r'cad1e597547c8d09a4960be936913c11302f08a5';
 
 /// 新增格位
 
@@ -407,7 +407,7 @@ final class SpaceItemsBySlotProvider
   }
 }
 
-String _$spaceItemsBySlotHash() => r'93d7bfe0d84f053a3d690d1cf7d0e0faa7cab579';
+String _$spaceItemsBySlotHash() => r'47d535f66fe524e6791c4a47d21231f92fd9220c';
 
 final class SpaceItemsBySlotFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.SpaceItem>>, String> {
@@ -455,7 +455,7 @@ final class SpaceItemActionsProvider
   SpaceItemActions create() => SpaceItemActions();
 }
 
-String _$spaceItemActionsHash() => r'8a4e26a78357ee564f403b3153c5a624a824f58c';
+String _$spaceItemActionsHash() => r'2a082e90829125791916a3f02c47a09f98ee7cc3';
 
 /// 格位物品操作
 

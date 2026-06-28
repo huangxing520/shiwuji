@@ -5,4 +5,5 @@ enum ItemTagType {
   newItem,
   urgent,
   normal,
+  expired,
 }
