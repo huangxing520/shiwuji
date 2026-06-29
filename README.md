@@ -1,7 +1,7 @@
-
-
 # ShiWuJi (拾物记)
-[<img src="https://images.typeform.com/images/QKuaAssrFCq7/image/default-firstframe.png" width="40" alt="Bugsnag" valign="middle">](https://www.bugsnag.com)
+
+Sponsored by [<img src="https://images.typeform.com/images/QKuaAssrFCq7/image/default-firstframe.png" width="40" alt="Bugsnag" valign="middle">](https://www.bugsnag.com)
+
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 A Flutter-based home inventory management app that helps you record where items are stored, categorize them, and track warranty status — with AI photo recognition, e-commerce order batch import, and WebDAV cloud backup.

@@ -1,7 +1,7 @@
-
-
 # 拾物记 (ShiWuJi)
-[<img src="https://images.typeform.com/images/QKuaAssrFCq7/image/default-firstframe.png" width="40" alt="Bugsnag" valign="middle">](https://www.bugsnag.com)
+
+赞助商 [<img src="https://images.typeform.com/images/QKuaAssrFCq7/image/default-firstframe.png" width="40" alt="Bugsnag" valign="middle">](https://www.bugsnag.com)
+
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 一款基于 Flutter 的家庭物品收纳管理应用，帮助你记录物品存放位置、归类整理、跟踪保修状态，支持 AI 拍照识别、订单批量导入和 WebDAV 云端备份。
