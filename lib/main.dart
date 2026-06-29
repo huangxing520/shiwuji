@@ -1,6 +1,7 @@
 import 'package:bugsnag_flutter/bugsnag_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 import 'services/notification_service.dart';
@@ -11,17 +12,21 @@ import 'utils/package_info_setup_web.dart'
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerPackageInfoPlus();
-  await bugsnag.start(apiKey: 'a7343293366ed808d575ca08e0a42c03');
+
+  // 加载 .env 配置文件（含 BUGSNAG_API_KEY 等敏感信息）
+  await dotenv.load(fileName: '.env');
+
+  // 启动 Bugsnag 崩溃监控，API Key 从 .env 读取
+  final bugsnagApiKey = dotenv.env['BUGSNAG_API_KEY'] ?? '';
+  if (bugsnagApiKey.isNotEmpty) {
+    await bugsnag.start(apiKey: bugsnagApiKey);
+  }
 
   await NotificationService().init();
   await FirstRunService.init();
   // 预加载首页背景图，避免首次渲染时闪烁
   await rootBundle.load('assets/icon/background1.jpg');
-  try {
-  throw Exception('handled exception');
-} catch (e, stack) {
-  await bugsnag.notify(e, stack);
-}
+  
   runApp(ProviderScope(child: MyApp()));
   
 }
