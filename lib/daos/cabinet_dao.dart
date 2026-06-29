@@ -22,8 +22,12 @@ class CabinetDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertCabinet(CabinetsCompanion cabinet) =>
       into(cabinets).insert(cabinet);
 
-  Future<bool> updateCabinet(CabinetsCompanion cabinet) =>
-      update(cabinets).replace(cabinet);
+  Future<bool> updateCabinet(CabinetsCompanion cabinet) async {
+    final rows = await (update(cabinets)
+          ..where((t) => t.id.equals(cabinet.id.value)))
+        .write(cabinet);
+    return rows > 0;
+  }
 
   Future<int> deleteCabinet(String id) =>
       (delete(cabinets)..where((t) => t.id.equals(id))).go();

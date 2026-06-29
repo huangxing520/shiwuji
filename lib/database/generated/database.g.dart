@@ -1301,6 +1301,17 @@ class $CabinetsTable extends Cabinets with TableInfo<$CabinetsTable, Cabinet> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+    'photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1309,6 +1320,7 @@ class $CabinetsTable extends Cabinets with TableInfo<$CabinetsTable, Cabinet> {
     color,
     roomId,
     hasPhoto,
+    photoPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1365,6 +1377,12 @@ class $CabinetsTable extends Cabinets with TableInfo<$CabinetsTable, Cabinet> {
         hasPhoto.isAcceptableOrUnknown(data['has_photo']!, _hasPhotoMeta),
       );
     }
+    if (data.containsKey('photo_path')) {
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
+    }
     return context;
   }
 
@@ -1398,6 +1416,10 @@ class $CabinetsTable extends Cabinets with TableInfo<$CabinetsTable, Cabinet> {
         DriftSqlType.bool,
         data['${effectivePrefix}has_photo'],
       )!,
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      ),
     );
   }
 
@@ -1414,6 +1436,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
   final int color;
   final String roomId;
   final bool hasPhoto;
+  final String? photoPath;
   const Cabinet({
     required this.id,
     required this.name,
@@ -1421,6 +1444,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
     required this.color,
     required this.roomId,
     required this.hasPhoto,
+    this.photoPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1431,6 +1455,9 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
     map['color'] = Variable<int>(color);
     map['room_id'] = Variable<String>(roomId);
     map['has_photo'] = Variable<bool>(hasPhoto);
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
     return map;
   }
 
@@ -1442,6 +1469,9 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
       color: Value(color),
       roomId: Value(roomId),
       hasPhoto: Value(hasPhoto),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
     );
   }
 
@@ -1457,6 +1487,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
       color: serializer.fromJson<int>(json['color']),
       roomId: serializer.fromJson<String>(json['roomId']),
       hasPhoto: serializer.fromJson<bool>(json['hasPhoto']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
     );
   }
   @override
@@ -1469,6 +1500,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
       'color': serializer.toJson<int>(color),
       'roomId': serializer.toJson<String>(roomId),
       'hasPhoto': serializer.toJson<bool>(hasPhoto),
+      'photoPath': serializer.toJson<String?>(photoPath),
     };
   }
 
@@ -1479,6 +1511,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
     int? color,
     String? roomId,
     bool? hasPhoto,
+    Value<String?> photoPath = const Value.absent(),
   }) => Cabinet(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1486,6 +1519,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
     color: color ?? this.color,
     roomId: roomId ?? this.roomId,
     hasPhoto: hasPhoto ?? this.hasPhoto,
+    photoPath: photoPath.present ? photoPath.value : this.photoPath,
   );
   Cabinet copyWithCompanion(CabinetsCompanion data) {
     return Cabinet(
@@ -1495,6 +1529,7 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
       color: data.color.present ? data.color.value : this.color,
       roomId: data.roomId.present ? data.roomId.value : this.roomId,
       hasPhoto: data.hasPhoto.present ? data.hasPhoto.value : this.hasPhoto,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
     );
   }
 
@@ -1506,13 +1541,15 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
           ..write('emoji: $emoji, ')
           ..write('color: $color, ')
           ..write('roomId: $roomId, ')
-          ..write('hasPhoto: $hasPhoto')
+          ..write('hasPhoto: $hasPhoto, ')
+          ..write('photoPath: $photoPath')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, emoji, color, roomId, hasPhoto);
+  int get hashCode =>
+      Object.hash(id, name, emoji, color, roomId, hasPhoto, photoPath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1522,7 +1559,8 @@ class Cabinet extends DataClass implements Insertable<Cabinet> {
           other.emoji == this.emoji &&
           other.color == this.color &&
           other.roomId == this.roomId &&
-          other.hasPhoto == this.hasPhoto);
+          other.hasPhoto == this.hasPhoto &&
+          other.photoPath == this.photoPath);
 }
 
 class CabinetsCompanion extends UpdateCompanion<Cabinet> {
@@ -1532,6 +1570,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
   final Value<int> color;
   final Value<String> roomId;
   final Value<bool> hasPhoto;
+  final Value<String?> photoPath;
   final Value<int> rowid;
   const CabinetsCompanion({
     this.id = const Value.absent(),
@@ -1540,6 +1579,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
     this.color = const Value.absent(),
     this.roomId = const Value.absent(),
     this.hasPhoto = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CabinetsCompanion.insert({
@@ -1549,6 +1589,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
     required int color,
     required String roomId,
     this.hasPhoto = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1562,6 +1603,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
     Expression<int>? color,
     Expression<String>? roomId,
     Expression<bool>? hasPhoto,
+    Expression<String>? photoPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1571,6 +1613,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
       if (color != null) 'color': color,
       if (roomId != null) 'room_id': roomId,
       if (hasPhoto != null) 'has_photo': hasPhoto,
+      if (photoPath != null) 'photo_path': photoPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1582,6 +1625,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
     Value<int>? color,
     Value<String>? roomId,
     Value<bool>? hasPhoto,
+    Value<String?>? photoPath,
     Value<int>? rowid,
   }) {
     return CabinetsCompanion(
@@ -1591,6 +1635,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
       color: color ?? this.color,
       roomId: roomId ?? this.roomId,
       hasPhoto: hasPhoto ?? this.hasPhoto,
+      photoPath: photoPath ?? this.photoPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1616,6 +1661,9 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
     if (hasPhoto.present) {
       map['has_photo'] = Variable<bool>(hasPhoto.value);
     }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1631,6 +1679,7 @@ class CabinetsCompanion extends UpdateCompanion<Cabinet> {
           ..write('color: $color, ')
           ..write('roomId: $roomId, ')
           ..write('hasPhoto: $hasPhoto, ')
+          ..write('photoPath: $photoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4183,6 +4232,7 @@ typedef $$CabinetsTableCreateCompanionBuilder =
       required int color,
       required String roomId,
       Value<bool> hasPhoto,
+      Value<String?> photoPath,
       Value<int> rowid,
     });
 typedef $$CabinetsTableUpdateCompanionBuilder =
@@ -4193,6 +4243,7 @@ typedef $$CabinetsTableUpdateCompanionBuilder =
       Value<int> color,
       Value<String> roomId,
       Value<bool> hasPhoto,
+      Value<String?> photoPath,
       Value<int> rowid,
     });
 
@@ -4268,6 +4319,11 @@ class $$CabinetsTableFilterComposer
 
   ColumnFilters<bool> get hasPhoto => $composableBuilder(
     column: $table.hasPhoto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4354,6 +4410,11 @@ class $$CabinetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4401,6 +4462,9 @@ class $$CabinetsTableAnnotationComposer
 
   GeneratedColumn<bool> get hasPhoto =>
       $composableBuilder(column: $table.hasPhoto, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
 
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
@@ -4485,6 +4549,7 @@ class $$CabinetsTableTableManager
                 Value<int> color = const Value.absent(),
                 Value<String> roomId = const Value.absent(),
                 Value<bool> hasPhoto = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CabinetsCompanion(
                 id: id,
@@ -4493,6 +4558,7 @@ class $$CabinetsTableTableManager
                 color: color,
                 roomId: roomId,
                 hasPhoto: hasPhoto,
+                photoPath: photoPath,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4503,6 +4569,7 @@ class $$CabinetsTableTableManager
                 required int color,
                 required String roomId,
                 Value<bool> hasPhoto = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CabinetsCompanion.insert(
                 id: id,
@@ -4511,6 +4578,7 @@ class $$CabinetsTableTableManager
                 color: color,
                 roomId: roomId,
                 hasPhoto: hasPhoto,
+                photoPath: photoPath,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -296,7 +296,7 @@ as int,
 /// @nodoc
 mixin _$Cabinet {
 
- String get id; String get name; String get emoji;@ColorConverter() Color get color; int get items; int get occupation; bool get hasPhoto; int get expectedItems;
+ String get id; String get name; String get emoji;@ColorConverter() Color get color; int get items; int get occupation; bool get hasPhoto; int get expectedItems; String? get photoPath;
 /// Create a copy of Cabinet
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -309,16 +309,16 @@ $CabinetCopyWith<Cabinet> get copyWith => _$CabinetCopyWithImpl<Cabinet>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cabinet&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.color, color) || other.color == color)&&(identical(other.items, items) || other.items == items)&&(identical(other.occupation, occupation) || other.occupation == occupation)&&(identical(other.hasPhoto, hasPhoto) || other.hasPhoto == hasPhoto)&&(identical(other.expectedItems, expectedItems) || other.expectedItems == expectedItems));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cabinet&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.color, color) || other.color == color)&&(identical(other.items, items) || other.items == items)&&(identical(other.occupation, occupation) || other.occupation == occupation)&&(identical(other.hasPhoto, hasPhoto) || other.hasPhoto == hasPhoto)&&(identical(other.expectedItems, expectedItems) || other.expectedItems == expectedItems)&&(identical(other.photoPath, photoPath) || other.photoPath == photoPath));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,emoji,color,items,occupation,hasPhoto,expectedItems);
+int get hashCode => Object.hash(runtimeType,id,name,emoji,color,items,occupation,hasPhoto,expectedItems,photoPath);
 
 @override
 String toString() {
-  return 'Cabinet(id: $id, name: $name, emoji: $emoji, color: $color, items: $items, occupation: $occupation, hasPhoto: $hasPhoto, expectedItems: $expectedItems)';
+  return 'Cabinet(id: $id, name: $name, emoji: $emoji, color: $color, items: $items, occupation: $occupation, hasPhoto: $hasPhoto, expectedItems: $expectedItems, photoPath: $photoPath)';
 }
 
 
@@ -329,7 +329,7 @@ abstract mixin class $CabinetCopyWith<$Res>  {
   factory $CabinetCopyWith(Cabinet value, $Res Function(Cabinet) _then) = _$CabinetCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String emoji,@ColorConverter() Color color, int items, int occupation, bool hasPhoto, int expectedItems
+ String id, String name, String emoji,@ColorConverter() Color color, int items, int occupation, bool hasPhoto, int expectedItems, String? photoPath
 });
 
 
@@ -346,7 +346,7 @@ class _$CabinetCopyWithImpl<$Res>
 
 /// Create a copy of Cabinet
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? emoji = null,Object? color = null,Object? items = null,Object? occupation = null,Object? hasPhoto = null,Object? expectedItems = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? emoji = null,Object? color = null,Object? items = null,Object? occupation = null,Object? hasPhoto = null,Object? expectedItems = null,Object? photoPath = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -356,7 +356,8 @@ as Color,items: null == items ? _self.items : items // ignore: cast_nullable_to_
 as int,occupation: null == occupation ? _self.occupation : occupation // ignore: cast_nullable_to_non_nullable
 as int,hasPhoto: null == hasPhoto ? _self.hasPhoto : hasPhoto // ignore: cast_nullable_to_non_nullable
 as bool,expectedItems: null == expectedItems ? _self.expectedItems : expectedItems // ignore: cast_nullable_to_non_nullable
-as int,
+as int,photoPath: freezed == photoPath ? _self.photoPath : photoPath // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -441,10 +442,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems,  String? photoPath)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Cabinet() when $default != null:
-return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems);case _:
+return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems,_that.photoPath);case _:
   return orElse();
 
 }
@@ -462,10 +463,10 @@ return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.oc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems,  String? photoPath)  $default,) {final _that = this;
 switch (_that) {
 case _Cabinet():
-return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems);case _:
+return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems,_that.photoPath);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -482,10 +483,10 @@ return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.oc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String emoji, @ColorConverter()  Color color,  int items,  int occupation,  bool hasPhoto,  int expectedItems,  String? photoPath)?  $default,) {final _that = this;
 switch (_that) {
 case _Cabinet() when $default != null:
-return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems);case _:
+return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.occupation,_that.hasPhoto,_that.expectedItems,_that.photoPath);case _:
   return null;
 
 }
@@ -497,7 +498,7 @@ return $default(_that.id,_that.name,_that.emoji,_that.color,_that.items,_that.oc
 @JsonSerializable()
 
 class _Cabinet implements Cabinet {
-  const _Cabinet({required this.id, required this.name, required this.emoji, @ColorConverter() required this.color, required this.items, required this.occupation, required this.hasPhoto, required this.expectedItems});
+  const _Cabinet({required this.id, required this.name, required this.emoji, @ColorConverter() required this.color, required this.items, required this.occupation, required this.hasPhoto, required this.expectedItems, this.photoPath});
   factory _Cabinet.fromJson(Map<String, dynamic> json) => _$CabinetFromJson(json);
 
 @override final  String id;
@@ -508,6 +509,7 @@ class _Cabinet implements Cabinet {
 @override final  int occupation;
 @override final  bool hasPhoto;
 @override final  int expectedItems;
+@override final  String? photoPath;
 
 /// Create a copy of Cabinet
 /// with the given fields replaced by the non-null parameter values.
@@ -522,16 +524,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cabinet&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.color, color) || other.color == color)&&(identical(other.items, items) || other.items == items)&&(identical(other.occupation, occupation) || other.occupation == occupation)&&(identical(other.hasPhoto, hasPhoto) || other.hasPhoto == hasPhoto)&&(identical(other.expectedItems, expectedItems) || other.expectedItems == expectedItems));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cabinet&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.emoji, emoji) || other.emoji == emoji)&&(identical(other.color, color) || other.color == color)&&(identical(other.items, items) || other.items == items)&&(identical(other.occupation, occupation) || other.occupation == occupation)&&(identical(other.hasPhoto, hasPhoto) || other.hasPhoto == hasPhoto)&&(identical(other.expectedItems, expectedItems) || other.expectedItems == expectedItems)&&(identical(other.photoPath, photoPath) || other.photoPath == photoPath));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,emoji,color,items,occupation,hasPhoto,expectedItems);
+int get hashCode => Object.hash(runtimeType,id,name,emoji,color,items,occupation,hasPhoto,expectedItems,photoPath);
 
 @override
 String toString() {
-  return 'Cabinet(id: $id, name: $name, emoji: $emoji, color: $color, items: $items, occupation: $occupation, hasPhoto: $hasPhoto, expectedItems: $expectedItems)';
+  return 'Cabinet(id: $id, name: $name, emoji: $emoji, color: $color, items: $items, occupation: $occupation, hasPhoto: $hasPhoto, expectedItems: $expectedItems, photoPath: $photoPath)';
 }
 
 
@@ -542,7 +544,7 @@ abstract mixin class _$CabinetCopyWith<$Res> implements $CabinetCopyWith<$Res> {
   factory _$CabinetCopyWith(_Cabinet value, $Res Function(_Cabinet) _then) = __$CabinetCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String emoji,@ColorConverter() Color color, int items, int occupation, bool hasPhoto, int expectedItems
+ String id, String name, String emoji,@ColorConverter() Color color, int items, int occupation, bool hasPhoto, int expectedItems, String? photoPath
 });
 
 
@@ -559,7 +561,7 @@ class __$CabinetCopyWithImpl<$Res>
 
 /// Create a copy of Cabinet
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? emoji = null,Object? color = null,Object? items = null,Object? occupation = null,Object? hasPhoto = null,Object? expectedItems = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? emoji = null,Object? color = null,Object? items = null,Object? occupation = null,Object? hasPhoto = null,Object? expectedItems = null,Object? photoPath = freezed,}) {
   return _then(_Cabinet(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -569,7 +571,8 @@ as Color,items: null == items ? _self.items : items // ignore: cast_nullable_to_
 as int,occupation: null == occupation ? _self.occupation : occupation // ignore: cast_nullable_to_non_nullable
 as int,hasPhoto: null == hasPhoto ? _self.hasPhoto : hasPhoto // ignore: cast_nullable_to_non_nullable
 as bool,expectedItems: null == expectedItems ? _self.expectedItems : expectedItems // ignore: cast_nullable_to_non_nullable
-as int,
+as int,photoPath: freezed == photoPath ? _self.photoPath : photoPath // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

@@ -35,6 +35,7 @@ _Cabinet _$CabinetFromJson(Map<String, dynamic> json) => _Cabinet(
   occupation: (json['occupation'] as num).toInt(),
   hasPhoto: json['hasPhoto'] as bool,
   expectedItems: (json['expectedItems'] as num).toInt(),
+  photoPath: json['photoPath'] as String?,
 );
 
 Map<String, dynamic> _$CabinetToJson(_Cabinet instance) => <String, dynamic>{
@@ -46,6 +47,7 @@ Map<String, dynamic> _$CabinetToJson(_Cabinet instance) => <String, dynamic>{
   'occupation': instance.occupation,
   'hasPhoto': instance.hasPhoto,
   'expectedItems': instance.expectedItems,
+  'photoPath': instance.photoPath,
 };
 
 _Slot _$SlotFromJson(Map<String, dynamic> json) => _Slot(

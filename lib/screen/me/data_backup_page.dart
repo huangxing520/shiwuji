@@ -4,6 +4,11 @@ import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/providers/database_provider.dart';
+import 'package:shi_wu_ji/providers/item_providers.dart';
+import 'package:shi_wu_ji/providers/profile_provider.dart';
+import 'package:shi_wu_ji/providers/storage_providers.dart';
+import 'package:shi_wu_ji/providers/category_provider.dart';
+import 'package:shi_wu_ji/services/notification_service.dart';
 import 'package:shi_wu_ji/services/webdav_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -125,7 +130,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
     try {
       final list = await _webDavService.listBackups();
       if (mounted) setState(() => _backups = list);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DataBackup] 加载备份列表失败: $e');
+    }
     if (mounted) setState(() => _isLoadingBackups = false);
   }
 
@@ -140,9 +147,11 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
       final db = ref.read(databaseProvider);
       final filename = await _webDavService.backup(db);
       if (!mounted) return;
-      ToastUtils.show(context, '备份成功：$filename');
+      debugPrint('[DataBackup] 备份成功: $filename');
+      ToastUtils.show(context, '备份成功');
       _loadBackups();
     } catch (e) {
+      debugPrint('[DataBackup] 备份失败: $e');
       if (!mounted) return;
       ToastUtils.show(context, '备份失败：${e.toString().split('\n').first}');
     }
@@ -150,12 +159,19 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
   }
 
   Future<void> _doRestore(BackupFileInfo info) async {
+    final timeStr = _formatTime(info.time);
+    final countStr = info.itemCount != null ? '（含 ${info.itemCount} 件物品）' : '';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('确认恢复',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text('将从「${info.name}」恢复所有数据，当前数据会被覆盖。确定继续？'),
+        title: const Text(
+          '确认恢复',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          '将从 $timeStr 的备份$countStr 恢复所有数据，'
+          '当前数据会被覆盖。确定继续？',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -176,22 +192,61 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
     setState(() => _isRestoring = true);
     try {
       final db = ref.read(databaseProvider);
-      await _webDavService.restore(db, info.path);
+      final itemCount = await _webDavService.restore(db, info.path);
+      debugPrint('[DataBackup] 数据恢复完成，物品 $itemCount 件');
+
+      // 恢复后重建所有定时提醒（根据当前时间重新计算）
+      await _recreateReminders();
+
+      // 刷新各页面数据
+      ref.invalidate(itemsProvider);
+      ref.invalidate(profileManagerProvider);
+      ref.invalidate(roomsProvider);
+      ref.invalidate(storageStatsProvider);
+      ref.invalidate(storageLocationTreeProvider);
+      ref.invalidate(categoryManagerProvider);
+
       if (!mounted) return;
-      ToastUtils.show(context, '恢复成功，请重启应用');
+      ToastUtils.show(context, '恢复成功，已重建提醒');
     } catch (e) {
+      debugPrint('[DataBackup] 恢复失败: $e');
       if (!mounted) return;
       ToastUtils.show(context, '恢复失败：${e.toString().split('\n').first}');
     }
     if (mounted) setState(() => _isRestoring = false);
   }
 
+  /// 恢复后重建保修提醒：根据恢复的设置重载偏好，取消旧通知，按当前时间重新调度。
+  Future<void> _recreateReminders() async {
+    try {
+      final itemDao = ref.read(itemDaoProvider);
+      final settingsDao = ref.read(settingsDaoProvider);
+      final notifService = NotificationService();
+
+      // 1. 从恢复后的设置重载通知偏好（开关 / 提前几天）
+      await notifService.loadPreferences((key) => settingsDao.getValue(key));
+
+      // 2. 取消所有旧通知（引用的是旧物品 ID，可能已失效）
+      await notifService.cancelAll();
+
+      // 3. 读取恢复后的物品，重新调度提醒
+      final rows = await itemDao.getAllItems();
+      final items = rows.map(Items.toModel).toList();
+      await notifService.scheduleAllReminders(items);
+      debugPrint('[DataBackup] 已重建 ${items.length} 件物品的提醒');
+    } catch (e) {
+      debugPrint('[DataBackup] 重建提醒失败: $e');
+    }
+  }
+
   Future<void> _deleteBackup(BackupFileInfo info) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除备份',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          '删除备份',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Text('确定删除「${info.name}」？此操作不可恢复。'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
@@ -216,8 +271,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
       ToastUtils.show(context, '已删除');
       _loadBackups();
     } catch (e) {
+      debugPrint('[DataBackup] 删除备份失败: $e');
       if (!mounted) return;
-      ToastUtils.show(context, '删除失败');
+      ToastUtils.show(context, '删除失败：${e.toString().split('\n').first}');
     }
   }
 
@@ -256,7 +312,49 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                 ],
               ),
             ),
+            if (_isRestoring) _buildRestoringOverlay(),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 恢复中全屏遮罩，防止误操作
+  Widget _buildRestoringOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.4),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '正在恢复数据…',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '恢复后将自动重建提醒',
+                  style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -363,8 +461,11 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                   color: AppColors.info.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.cloud_outlined,
-                    size: 20, color: AppColors.info),
+                child: const Icon(
+                  Icons.cloud_outlined,
+                  size: 20,
+                  color: AppColors.info,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
@@ -514,7 +615,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: AppColors.info),
+                    strokeWidth: 2,
+                    color: AppColors.info,
+                  ),
                 )
               : Text(
                   '测试连接',
@@ -555,8 +658,11 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.backup_outlined,
-                    size: 20, color: AppColors.primary),
+                child: const Icon(
+                  Icons.backup_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
@@ -571,7 +677,8 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            '将所有物品、分类、收纳位置数据备份到 WebDAV 服务器。',
+            '将物品、分类、收纳位置、个人资料、通知设置等数据'
+            '打包为 ZIP 上传到 WebDAV 服务器。',
             style: TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,
@@ -617,7 +724,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Text(
                   _isBackingUp ? '备份中…' : '立即备份',
@@ -668,7 +777,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
             child: Padding(
               padding: EdgeInsets.all(20),
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.primary),
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
             ),
           )
         else if (_backups.isEmpty)
@@ -681,8 +792,11 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
             ),
             child: Column(
               children: [
-                Icon(Icons.cloud_off_outlined,
-                    size: 40, color: AppColors.textHint.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 40,
+                  color: AppColors.textHint.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   '暂无备份记录',
@@ -702,7 +816,7 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
   }
 
   Widget _buildBackupTile(BackupFileInfo info) {
-    final dateStr = _parseFilenameDate(info.name);
+    final timeStr = _formatTime(info.time);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -727,8 +841,11 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                 color: AppColors.success.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.description_outlined,
-                  size: 20, color: AppColors.success),
+              child: const Icon(
+                Icons.description_outlined,
+                size: 20,
+                color: AppColors.success,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -736,21 +853,56 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    dateStr,
+                    timeStr,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    info.name,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textHint,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (info.itemCount != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${info.itemCount} 件物品',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          info.isZip ? 'ZIP' : 'JSON',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.info,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -791,15 +943,12 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
     );
   }
 
-  String _parseFilenameDate(String name) {
-    // shiwuji_backup_20260627_143000.json → 2026-06-27 14:30
-    try {
-      final parts = name.replaceAll('shiwuji_backup_', '').replaceAll('.json', '');
-      final date = parts.substring(0, 8);
-      final time = parts.substring(9);
-      return '${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)} ${time.substring(0, 2)}:${time.substring(2, 4)}';
-    } catch (_) {
-      return name;
-    }
+  /// 格式化备份时间为「YYYY-MM-DD HH:MM」
+  String _formatTime(DateTime? time) {
+    if (time == null) return '历史备份';
+    return '${time.year}-${_pad(time.month)}-${_pad(time.day)} '
+        '${_pad(time.hour)}:${_pad(time.minute)}';
   }
+
+  String _pad(int n) => n.toString().padLeft(2, '0');
 }

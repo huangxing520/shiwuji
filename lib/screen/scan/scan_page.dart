@@ -394,7 +394,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: GestureDetector(
-              onTap: () => context.push('/me'),
+               onTap: () =>{},
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -414,7 +414,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
                     ),
                     SizedBox(width: 6),
                     Text(
-                      '未配置AI模型，点击去设置',
+                      '未配置AI模型，去设置',
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],

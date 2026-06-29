@@ -97,6 +97,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     required String name,
     required String icon,
     int expectedItems = 1,
+    String? photoPath,
   }) {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final id = '${level}_$ts';
@@ -140,6 +141,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 emoji: icon,
                 color: color,
                 roomId: parentId,
+                photoPath: photoPath,
               );
           // 自动创建默认格子区域
           final slotId = 'slot_${ts}_default';

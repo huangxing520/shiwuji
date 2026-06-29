@@ -108,6 +108,7 @@ Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
         occupation: occupation,
         hasPhoto: row.hasPhoto,
         expectedItems: expectedTotal,
+        photoPath: row.photoPath,
       ),
     );
   }
@@ -126,8 +127,10 @@ class CabinetActions extends _$CabinetActions {
     required String emoji,
     required Color color,
     required String roomId,
+    String? photoPath,
   }) async {
     final dao = ref.read(cabinetDaoProvider);
+    final hasPhoto = photoPath != null && photoPath.isNotEmpty;
     await dao.insertCabinet(
       db.CabinetsCompanion.insert(
         id: id,
@@ -135,6 +138,8 @@ class CabinetActions extends _$CabinetActions {
         emoji: emoji,
         color: color.toARGB32(),
         roomId: roomId,
+        photoPath: photoPath != null ? Value(photoPath) : const Value.absent(),
+        hasPhoto: hasPhoto ? const Value(true) : const Value.absent(),
       ),
     );
     ref.invalidate(cabinetsByRoomProvider(roomId));

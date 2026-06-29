@@ -7,6 +7,7 @@ class Cabinets extends Table {
   IntColumn get color => integer()();
   TextColumn get roomId => text().references(Rooms, #id)();
   BoolColumn get hasPhoto => boolean().withDefault(const Constant(false))();
+  TextColumn get photoPath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

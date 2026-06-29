@@ -26,7 +26,7 @@ packages:
     source: hosted
     version: "0.3.3"
   archive:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: archive
       sha256: a96e8b390886ee8abb49b7bd3ac8df6f451c621619f52a26e815fdcf568959ff
@@ -57,6 +57,22 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.2"
+  bugsnag_bridge:
+    dependency: transitive
+    description:
+      name: bugsnag_bridge
+      sha256: "385d280e12abc9169fc20f43c8c28ad5bf970be81d4c077738e12c1f97676b48"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.1.0"
+  bugsnag_flutter:
+    dependency: "direct main"
+    description:
+      name: bugsnag_flutter
+      sha256: ff88a09b18437a65121e6757141285d3ed6449f7cb1cf750a4a3454d764909ca
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "4.2.1"
   build:
     dependency: transitive
     description:
@@ -237,10 +253,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio
-      sha256: aff32c08f92787a557dd5c0145ac91536481831a01b4648136373cddb0e64f8c
+      sha256: ea2bad3c89a27635ce2d85cce4d6b199da49a5a48ec77b03e45b65a3b90922b0
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "5.9.2"
+    version: "5.10.0"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -1177,10 +1193,10 @@ packages:
     dependency: "direct main"
     description:
       name: timezone
-      sha256: "784a5e34d2eb62e1326f24d6f600aaaee452eb8ca8ef2f384a59244e292d158b"
+      sha256: "981d1020d6ef8fe1e7b3de5054e5b25579ae7c403d7734adc508ffc47668e9cb"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.11.0"
+    version: "0.11.1"
   typed_data:
     dependency: transitive
     description:

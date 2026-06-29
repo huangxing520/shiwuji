@@ -155,7 +155,7 @@ final class CabinetsByRoomProvider
   }
 }
 
-String _$cabinetsByRoomHash() => r'b44e013c8c846eed5702c3c95dc82338c3547acc';
+String _$cabinetsByRoomHash() => r'00f732ed98ff34fa69db05ad07bf970d2b27c003';
 
 final class CabinetsByRoomFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.Cabinet>>, String> {
@@ -203,7 +203,7 @@ final class CabinetActionsProvider
   CabinetActions create() => CabinetActions();
 }
 
-String _$cabinetActionsHash() => r'9cd888ed9834f7e12a738391ae4b8786aee9784a';
+String _$cabinetActionsHash() => r'b7788cfed913e3454520e742210e984002fb9268';
 
 /// 新增柜子
 

@@ -40,7 +40,7 @@ class Items extends _$Items {
   Future<List<Item>> build() async {
     _dao = ref.watch(itemDaoProvider);
     final rows = await _dao.getAllItems();
-    return rows.map<Item>(_toModel).toList();
+    return rows.map<Item>(toModel).toList();
   }
 
   Future<void> addItem(Item item) async {
@@ -84,7 +84,8 @@ class Items extends _$Items {
     ref.invalidateSelf();
   }
 
-  static Item _toModel(db.Item row) => Item(
+  /// 将 drift 行记录转换为 Item 模型（公开方法，供备份恢复等场景使用）
+  static Item toModel(db.Item row) => Item(
     id: row.id,
     name: row.name,
     price: row.price,
@@ -231,7 +232,11 @@ int weeklyNewCount(Ref ref) {
       .maybeWhen(
         data: (items) {
           final now = DateTime.now();
-          final monday = DateTime(now.year, now.month, now.day - (now.weekday - DateTime.monday));
+          final monday = DateTime(
+            now.year,
+            now.month,
+            now.day - (now.weekday - DateTime.monday),
+          );
           return items.where((i) => !i.purchaseDate.isBefore(monday)).length;
         },
         orElse: () => 0,

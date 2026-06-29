@@ -1,131 +1,135 @@
-# 拾物记
 
-一款基于 Flutter 的家庭物品收纳管理应用，帮助你记录物品存放位置、归类整理、跟踪保修状态，支持 AI 拍照识别、订单批量导入和 WebDAV 云端备份。
 
-## 功能特性
+# ShiWuJi (拾物记)
+[<img src="https://images.typeform.com/images/QKuaAssrFCq7/image/default-firstframe.png" width="40" alt="Bugsnag" valign="middle">](https://www.bugsnag.com)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-- **AI 拍照识别**：拍摄物品照片，AI 自动识别名称、品牌、分类并预填充信息，支持 18+ AI 服务商
-- **物品管理**：记录物品名称、价格、分类、存放位置、购买日期、保修天数、照片、品牌、备注等完整信息
-- **空间层级**：房间 → 柜体 → 区域 → 物品，四层空间结构精准定位
-- **保修跟踪**：自动计算保修到期时间，首页展示即将到期、已过保、在保物品统计
-- **分类管理**：内置 12 个分类（数码、家电、护肤、厨房、衣物、书籍、收纳、玩具、运动、文具、钥匙、工具），支持自定义扩展
-- **订单导入**：从电商平台一键导入订单，批量生成物品记录
-- **数据卡片**：首页展示物品总数、总资产价值（含千分位格式）、本周新增数、本月增长额
-- **物品库筛选**：按分类/保修状态筛选、按时间/价格/到期日多维排序
-- **收纳空间管理**：房间、柜体、区域三级管理，实时显示占用情况
-- **WebDAV 备份**：连接任意 WebDAV 服务（坚果云、Nextcloud 等）进行数据库备份与恢复
-- **版本更新检查**：从 GitHub Releases 拉取最新版本信息，弹窗提示并跳转浏览器下载
-- **本地通知**：物品保修到期提醒
-- **数据加密**：基于 PBKDF2 + AES 的数据库加密
-- **多端支持**：Android / iOS / Windows / Linux / Web
+A Flutter-based home inventory management app that helps you record where items are stored, categorize them, and track warranty status — with AI photo recognition, e-commerce order batch import, and WebDAV cloud backup.
 
-## 技术栈
+## Features
 
-| 领域 | 选型 |
-| --- | --- |
-| 框架 | Flutter / Dart |
-| 状态管理 | Riverpod + riverpod_annotation（代码生成） |
-| 路由 | go_router（StatefulShellRoute 底部导航） |
-| 网络请求 | dio（统一拦截器、错误处理） |
-| 本地存储 | drift（类型安全 SQLite ORM） |
-| 云端备份 | webdav_client |
-| 数据模型 | freezed + json_serializable |
-| 通知 | flutter_local_notifications |
-| 加密 | crypto（PBKDF2 + AES-256） |
-| 图片 | image_picker + photo_view |
-| 版本信息 | package_info_plus |
-| 浏览器跳转 | url_launcher |
+- **AI Photo Recognition**: Snap a photo and AI auto-fills the name, brand, and category. 18+ AI providers supported.
+- **Item Management**: Record name, price, category, storage location, purchase date, warranty days, photo, brand, notes, and more.
+- **Spatial Hierarchy**: Room → Cabinet → Slot → Item, a four-level structure for precise localization.
+- **Warranty Tracking**: Auto-computes expiry; home page surfaces expiring-soon, expired, and in-warranty stats.
+- **Categories**: 12 built-in categories (Digital, Appliance, Skincare, Kitchen, Clothing, Books, Storage, Toys, Sports, Stationery, Keys, Tools) with custom extension support.
+- **Order Import**: One-tap import from e-commerce platforms to batch-generate item records.
+- **Stat Cards**: Home page shows total item count, total asset value (with thousands separators), this week's additions, and this month's growth.
+- **Inventory Filtering**: Filter by category / warranty status; sort by time / price / expiry date.
+- **Storage Management**: Three-tier management of rooms, cabinets, and slots with real-time occupancy.
+- **WebDAV Backup**: Connect any WebDAV service (Jianguoyun, Nextcloud, etc.) for database backup and restore.
+- **Update Checker**: Pulls latest release info from GitHub Releases, prompts in-app, and opens the browser to download.
+- **Local Notifications**: Reminders for warranty expiry.
+- **Data Encryption**: Database encryption based on PBKDF2 + AES.
+- **Multi-Platform**: Android / iOS / Windows / Linux / Web.
 
-## 目录结构
+## Tech Stack
+
+| Area            | Choice                                          |
+| --------------- | ----------------------------------------------- |
+| Framework       | Flutter / Dart                                  |
+| State Management| Riverpod + riverpod\_annotation (codegen)       |
+| Routing         | go\_router (StatefulShellRoute bottom nav)      |
+| Networking      | dio (unified interceptors, error handling)      |
+| Local Storage   | drift (type-safe SQLite ORM)                    |
+| Cloud Backup    | webdav\_client                                  |
+| Data Models     | freezed + json\_serializable                    |
+| Notifications   | flutter\_local\_notifications                   |
+| Encryption      | crypto (PBKDF2 + AES-256)                       |
+| Images          | image\_picker + photo\_view                     |
+| Version Info    | package\_info\_plus                             |
+| Browser Launch  | url\_launcher                                   |
+
+## Directory Structure
 
 ```
 lib/
-├── main.dart                     # 应用入口
-├── app_router.dart               # 路由配置（5 页面 + 详情/编辑等子路由）
-├── constants/                    # 主题色、字号、阴影、输入框样式
-├── database/                     # drift 数据库定义
-│   ├── database.dart             # 数据库实例、迁移策略、种子数据初始化
-│   ├── seed_data.dart            # 首次安装种子数据（3 房间/3 柜体/3 区域/12 分类）
-│   └── tables/                   # 8 张表定义（Items/Rooms/Cabinets/Slots/...）
-├── daos/                         # 数据访问层（每表一个 DAO）
-├── models/                       # freezed 数据模型 + 枚举
+├── main.dart                     # App entry
+├── app_router.dart               # Routing (5 tabs + detail/edit sub-routes)
+├── constants/                    # Theme colors, font sizes, shadows, input styles
+├── database/                     # drift database definitions
+│   ├── database.dart             # DB instance, migration strategy, seed init
+│   ├── seed_data.dart            # First-install seed data (3 rooms / 3 cabinets / 3 slots / 12 categories)
+│   └── tables/                   # 8 table definitions (Items/Rooms/Cabinets/Slots/...)
+├── daos/                         # Data access layer (one DAO per table)
+├── models/                       # freezed data models + enums
 │   └── enums/                    # ItemStatus / SortType / TabType / PendingCardType
-├── providers/                    # Riverpod 状态提供者
-├── services/                     # 业务服务
-│   ├── ai/                       # AI 识别服务
-│   │   ├── ai_provider.dart      # 抽象基类
-│   │   ├── ai_provider_registry.dart  # 服务商注册表
-│   │   ├── ai_provider_type.dart # 服务商枚举
-│   │   ├── ai_models.dart        # AI 响应数据模型
-│   │   └── providers/            # 18+ AI 服务商实现
-│   ├── http_service.dart         # dio 封装
-│   ├── update_service.dart       # GitHub Releases 版本检查
-│   ├── webdav_service.dart       # WebDAV 备份/恢复
-│   ├── encryption_service.dart   # PBKDF2 + AES 加密
-│   ├── notification_service.dart # 本地通知
-│   ├── photo_service.dart        # 拍照/相册选图
-│   └── prompt_service.dart       # AI 提示词管理
-├── screen/                       # 页面
-│   ├── home/                     # 首页（数据卡片、待处理、最近新增）
-│   ├── inventory/                # 物品库（筛选、排序、列表）
-│   ├── storage/                  # 收纳空间管理
-│   ├── me/                       # 个人中心（备份、通知、AI 设置、更新检查）
-│   ├── scan/                     # AI 拍照识别
-│   └── order_import/             # 电商订单导入
-└── widgets/                      # 通用 UI 组件（20+）
+├── providers/                    # Riverpod state providers
+├── services/                     # Business services
+│   ├── ai/                       # AI recognition service
+│   │   ├── ai_provider.dart      # Abstract base class
+│   │   ├── ai_provider_registry.dart  # Provider registry
+│   │   ├── ai_provider_type.dart # Provider enum
+│   │   ├── ai_models.dart        # AI response models
+│   │   └── providers/            # 18+ AI provider implementations
+│   ├── http_service.dart         # dio wrapper
+│   ├── update_service.dart       # GitHub Releases version check
+│   ├── webdav_service.dart       # WebDAV backup/restore
+│   ├── encryption_service.dart   # PBKDF2 + AES encryption
+│   ├── notification_service.dart # Local notifications
+│   ├── photo_service.dart        # Camera / gallery picker
+│   └── prompt_service.dart       # AI prompt management
+├── screen/                       # Pages
+│   ├── home/                     # Home (stat cards, pending, recent additions)
+│   ├── inventory/                # Inventory (filter, sort, list)
+│   ├── storage/                  # Storage management
+│   ├── me/                       # Profile (backup, notifications, AI settings, update check)
+│   ├── scan/                     # AI photo recognition
+│   └── order_import/             # E-commerce order import
+└── widgets/                      # Reusable UI components (20+)
 ```
 
-## 快速开始
+## Getting Started
 
-### 环境要求
+### Prerequisites
 
 - Flutter 3.44+
 - Dart 3.11+
-- Android Studio / Xcode（移动端构建）
-- CMake + Visual Studio Build Tools（Windows 桌面端构建）
+- Android Studio / Xcode (mobile builds)
+- CMake + Visual Studio Build Tools (Windows desktop builds)
 
-### 安装与运行
+### Install & Run
 
 ```bash
-# 1. 拉取依赖
+# 1. Fetch dependencies
 flutter pub get
 
-# 2. 生成代码（freezed / json_serializable / drift / riverpod）
+# 2. Generate code (freezed / json_serializable / drift / riverpod)
 dart run build_runner build
 
-# 3. 运行
+# 3. Run
 flutter run
 ```
 
-### 代码生成
+### Code Generation
 
-修改 `models/`、`database/tables/`、`providers/` 后需重新生成：
+Re-run after editing `models/`, `database/tables/`, or `providers/`:
 
 ```bash
 dart run build_runner build
 
-# 开发时持续监听
+# Watch mode for development
 dart run build_runner watch
 ```
 
-## 测试
+## Testing
 
 ```bash
-flutter test                                  # 全部测试
-flutter test test/services/                   # 仅服务层测试
-flutter test --coverage                       # 生成覆盖率报告
+flutter test                                  # All tests
+flutter test test/services/                   # Service-layer tests only
+flutter test --coverage                       # Generate coverage report
 ```
 
-## 构建 Release
+## Release Builds
 
 ### Android
 
 ```bash
-flutter build apk --split-per-abi             # 分架构 APK
+flutter build apk --split-per-abi             # Per-ABI APKs
 flutter build appbundle                       # AAB (Play Store)
 ```
 
-签名配置放在 `android/key.properties`（不入库），由 `android/app/build.gradle.kts` 读取。
+Signing config lives in `android/key.properties` (not committed), read by `android/app/build.gradle.kts`.
 
 ### Windows / Linux / Web
 
@@ -135,6 +139,6 @@ flutter build linux
 flutter build web --release
 ```
 
-## 许可证
+## License
 
-本项目采用 [MIT License](LICENSE) 开源协议。
+This project is licensed under the [MIT License](LICENSE).

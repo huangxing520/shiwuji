@@ -234,6 +234,7 @@ class HttpService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
         return ApiException(-1, '网络请求超时');
       case DioExceptionType.connectionError:
         return ApiException(-1, '网络连接失败，请检查网络');
@@ -246,6 +247,7 @@ class HttpService {
         return ApiException(-1, '证书校验失败');
       case DioExceptionType.unknown:
         return ApiException(-1, e.message ?? '未知网络错误');
+      
     }
   }
 

@@ -31,6 +31,7 @@ abstract class Cabinet with _$Cabinet {
     required int occupation,
     required bool hasPhoto,
     required int expectedItems,
+    String? photoPath,
   }) = _Cabinet;
 
   factory Cabinet.fromJson(Map<String, dynamic> json) =>
