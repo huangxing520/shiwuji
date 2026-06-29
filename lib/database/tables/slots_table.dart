@@ -6,6 +6,7 @@ class Slots extends Table {
   TextColumn get emoji => text()();
   IntColumn get color => integer()();
   TextColumn get cabinetId => text().references(Cabinets, #id)();
+  IntColumn get expectedItems => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {id};

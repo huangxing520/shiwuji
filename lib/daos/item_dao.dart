@@ -53,4 +53,40 @@ class ItemDao extends DatabaseAccessor<AppDatabase> with _$ItemDaoMixin {
     ).get();
     return result.first.read<double>('total');
   }
+
+  /// 统计本周（周一 00:00 起）新增的物品数量。
+  /// 使用 drift customSelect，确保查询口径与 Items.purchaseDate 字段一致。
+  Future<int> countWeeklyNew() async {
+    final monday = _startOfWeek();
+    final result = await customSelect(
+      'SELECT COUNT(*) AS cnt FROM items WHERE purchase_date >= ?',
+      variables: [Variable.withDateTime(monday)],
+    ).get();
+    return result.first.read<int>('cnt');
+  }
+
+  /// 统计本月（1 日 00:00 起）新增物品的总价值（price 求和）。
+  /// 使用 drift customSelect，确保口径与 Items.price 字段一致。
+  Future<double> sumMonthlyGrowth() async {
+    final firstOfMonth = _startOfMonth();
+    final result = await customSelect(
+      'SELECT COALESCE(SUM(price), 0) AS total FROM items WHERE purchase_date >= ?',
+      variables: [Variable.withDateTime(firstOfMonth)],
+    ).get();
+    return result.first.read<double>('total');
+  }
+
+  /// 本周一 00:00:00
+  static DateTime _startOfWeek() {
+    final now = DateTime.now();
+    final weekdayOffset = now.weekday - DateTime.monday;
+    final monday = DateTime(now.year, now.month, now.day - weekdayOffset);
+    return monday;
+  }
+
+  /// 本月 1 日 00:00:00
+  static DateTime _startOfMonth() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
 }

@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>拾物记需要使用相机拍照识别物品</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>拾物记需要访问相册以选择物品图片进行识别</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>拾物记需要保存物品图片</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

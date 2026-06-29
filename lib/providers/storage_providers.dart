@@ -19,8 +19,9 @@ Future<List<model.Room>> rooms(Ref ref) async {
   for (final row in rows) {
     final cabinetCount = await dao.cabinetCount(row.id);
     final itemCount = await dao.itemCount(row.id);
-    final occupation = cabinetCount > 0
-        ? (itemCount * 100 ~/ (cabinetCount * 10))
+    final expectedTotal = await dao.sumExpectedItems(row.id);
+    final occupation = expectedTotal > 0
+        ? (itemCount * 100 ~/ expectedTotal)
         : 0;
     result.add(
       model.Room(
@@ -30,7 +31,7 @@ Future<List<model.Room>> rooms(Ref ref) async {
         color: Color(row.color),
         items: itemCount,
         storageCount: cabinetCount,
-        occupation: occupation.clamp(0, 100),
+        occupation: occupation,
       ),
     );
   }
@@ -87,14 +88,15 @@ class RoomActions extends _$RoomActions {
 @riverpod
 Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
   final dao = ref.watch(cabinetDaoProvider);
+  final slotDao = ref.watch(slotDaoProvider);
   final rows = await dao.getByRoom(roomId);
 
   final result = <model.Cabinet>[];
   for (final row in rows) {
-    final slotCount = await dao.slotCount(row.id);
     final itemCount = await dao.itemCount(row.id);
-    final occupation = slotCount > 0
-        ? (itemCount * 100 ~/ (slotCount * 10))
+    final expectedTotal = await slotDao.sumExpectedItems(row.id);
+    final occupation = expectedTotal > 0
+        ? (itemCount * 100 ~/ expectedTotal)
         : 0;
     result.add(
       model.Cabinet(
@@ -103,8 +105,9 @@ Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
         emoji: row.emoji,
         color: Color(row.color),
         items: itemCount,
-        occupation: occupation.clamp(0, 100),
+        occupation: occupation,
         hasPhoto: row.hasPhoto,
+        expectedItems: expectedTotal,
       ),
     );
   }
@@ -176,6 +179,8 @@ Future<List<model.Slot>> slotsByCabinet(Ref ref, String cabinetId) async {
   final result = <model.Slot>[];
   for (final row in rows) {
     final itemCount = await dao.itemCount(row.id);
+    final expected = row.expectedItems;
+    final occupation = expected > 0 ? (itemCount * 100 ~/ expected) : 0;
     result.add(
       model.Slot(
         id: row.id,
@@ -183,7 +188,8 @@ Future<List<model.Slot>> slotsByCabinet(Ref ref, String cabinetId) async {
         emoji: row.emoji,
         color: Color(row.color),
         items: itemCount,
-        occupation: (itemCount * 10).clamp(0, 100),
+        occupation: occupation,
+        expectedItems: expected,
       ),
     );
   }
@@ -202,6 +208,7 @@ class SlotActions extends _$SlotActions {
     required String emoji,
     required Color color,
     required String cabinetId,
+    int expectedItems = 1,
   }) async {
     final dao = ref.read(slotDaoProvider);
     await dao.insertSlot(
@@ -211,6 +218,7 @@ class SlotActions extends _$SlotActions {
         emoji: emoji,
         color: color.toARGB32(),
         cabinetId: cabinetId,
+        expectedItems: Value(expectedItems),
       ),
     );
     ref.invalidate(slotsByCabinetProvider(cabinetId));
@@ -223,10 +231,18 @@ class SlotActions extends _$SlotActions {
     required String cabinetId,
     required String name,
     required String emoji,
+    int? expectedItems,
   }) async {
     final dao = ref.read(slotDaoProvider);
     await dao.updateSlot(
-      db.SlotsCompanion(id: Value(id), name: Value(name), emoji: Value(emoji)),
+      db.SlotsCompanion(
+        id: Value(id),
+        name: Value(name),
+        emoji: Value(emoji),
+        expectedItems: expectedItems != null
+            ? Value(expectedItems)
+            : const Value.absent(),
+      ),
     );
     ref.invalidate(slotsByCabinetProvider(cabinetId));
     ref.invalidate(roomsProvider);

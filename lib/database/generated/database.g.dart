@@ -1692,8 +1692,27 @@ class $SlotsTable extends Slots with TableInfo<$SlotsTable, Slot> {
       'REFERENCES cabinets (id)',
     ),
   );
+  static const VerificationMeta _expectedItemsMeta = const VerificationMeta(
+    'expectedItems',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, emoji, color, cabinetId];
+  late final GeneratedColumn<int> expectedItems = GeneratedColumn<int>(
+    'expected_items',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    emoji,
+    color,
+    cabinetId,
+    expectedItems,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1743,6 +1762,15 @@ class $SlotsTable extends Slots with TableInfo<$SlotsTable, Slot> {
     } else if (isInserting) {
       context.missing(_cabinetIdMeta);
     }
+    if (data.containsKey('expected_items')) {
+      context.handle(
+        _expectedItemsMeta,
+        expectedItems.isAcceptableOrUnknown(
+          data['expected_items']!,
+          _expectedItemsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1772,6 +1800,10 @@ class $SlotsTable extends Slots with TableInfo<$SlotsTable, Slot> {
         DriftSqlType.string,
         data['${effectivePrefix}cabinet_id'],
       )!,
+      expectedItems: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expected_items'],
+      )!,
     );
   }
 
@@ -1787,12 +1819,14 @@ class Slot extends DataClass implements Insertable<Slot> {
   final String emoji;
   final int color;
   final String cabinetId;
+  final int expectedItems;
   const Slot({
     required this.id,
     required this.name,
     required this.emoji,
     required this.color,
     required this.cabinetId,
+    required this.expectedItems,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1802,6 +1836,7 @@ class Slot extends DataClass implements Insertable<Slot> {
     map['emoji'] = Variable<String>(emoji);
     map['color'] = Variable<int>(color);
     map['cabinet_id'] = Variable<String>(cabinetId);
+    map['expected_items'] = Variable<int>(expectedItems);
     return map;
   }
 
@@ -1812,6 +1847,7 @@ class Slot extends DataClass implements Insertable<Slot> {
       emoji: Value(emoji),
       color: Value(color),
       cabinetId: Value(cabinetId),
+      expectedItems: Value(expectedItems),
     );
   }
 
@@ -1826,6 +1862,7 @@ class Slot extends DataClass implements Insertable<Slot> {
       emoji: serializer.fromJson<String>(json['emoji']),
       color: serializer.fromJson<int>(json['color']),
       cabinetId: serializer.fromJson<String>(json['cabinetId']),
+      expectedItems: serializer.fromJson<int>(json['expectedItems']),
     );
   }
   @override
@@ -1837,6 +1874,7 @@ class Slot extends DataClass implements Insertable<Slot> {
       'emoji': serializer.toJson<String>(emoji),
       'color': serializer.toJson<int>(color),
       'cabinetId': serializer.toJson<String>(cabinetId),
+      'expectedItems': serializer.toJson<int>(expectedItems),
     };
   }
 
@@ -1846,12 +1884,14 @@ class Slot extends DataClass implements Insertable<Slot> {
     String? emoji,
     int? color,
     String? cabinetId,
+    int? expectedItems,
   }) => Slot(
     id: id ?? this.id,
     name: name ?? this.name,
     emoji: emoji ?? this.emoji,
     color: color ?? this.color,
     cabinetId: cabinetId ?? this.cabinetId,
+    expectedItems: expectedItems ?? this.expectedItems,
   );
   Slot copyWithCompanion(SlotsCompanion data) {
     return Slot(
@@ -1860,6 +1900,9 @@ class Slot extends DataClass implements Insertable<Slot> {
       emoji: data.emoji.present ? data.emoji.value : this.emoji,
       color: data.color.present ? data.color.value : this.color,
       cabinetId: data.cabinetId.present ? data.cabinetId.value : this.cabinetId,
+      expectedItems: data.expectedItems.present
+          ? data.expectedItems.value
+          : this.expectedItems,
     );
   }
 
@@ -1870,13 +1913,15 @@ class Slot extends DataClass implements Insertable<Slot> {
           ..write('name: $name, ')
           ..write('emoji: $emoji, ')
           ..write('color: $color, ')
-          ..write('cabinetId: $cabinetId')
+          ..write('cabinetId: $cabinetId, ')
+          ..write('expectedItems: $expectedItems')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, emoji, color, cabinetId);
+  int get hashCode =>
+      Object.hash(id, name, emoji, color, cabinetId, expectedItems);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1885,7 +1930,8 @@ class Slot extends DataClass implements Insertable<Slot> {
           other.name == this.name &&
           other.emoji == this.emoji &&
           other.color == this.color &&
-          other.cabinetId == this.cabinetId);
+          other.cabinetId == this.cabinetId &&
+          other.expectedItems == this.expectedItems);
 }
 
 class SlotsCompanion extends UpdateCompanion<Slot> {
@@ -1894,6 +1940,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
   final Value<String> emoji;
   final Value<int> color;
   final Value<String> cabinetId;
+  final Value<int> expectedItems;
   final Value<int> rowid;
   const SlotsCompanion({
     this.id = const Value.absent(),
@@ -1901,6 +1948,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
     this.emoji = const Value.absent(),
     this.color = const Value.absent(),
     this.cabinetId = const Value.absent(),
+    this.expectedItems = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SlotsCompanion.insert({
@@ -1909,6 +1957,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
     required String emoji,
     required int color,
     required String cabinetId,
+    this.expectedItems = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1921,6 +1970,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
     Expression<String>? emoji,
     Expression<int>? color,
     Expression<String>? cabinetId,
+    Expression<int>? expectedItems,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1929,6 +1979,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
       if (emoji != null) 'emoji': emoji,
       if (color != null) 'color': color,
       if (cabinetId != null) 'cabinet_id': cabinetId,
+      if (expectedItems != null) 'expected_items': expectedItems,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1939,6 +1990,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
     Value<String>? emoji,
     Value<int>? color,
     Value<String>? cabinetId,
+    Value<int>? expectedItems,
     Value<int>? rowid,
   }) {
     return SlotsCompanion(
@@ -1947,6 +1999,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
       emoji: emoji ?? this.emoji,
       color: color ?? this.color,
       cabinetId: cabinetId ?? this.cabinetId,
+      expectedItems: expectedItems ?? this.expectedItems,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1969,6 +2022,9 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
     if (cabinetId.present) {
       map['cabinet_id'] = Variable<String>(cabinetId.value);
     }
+    if (expectedItems.present) {
+      map['expected_items'] = Variable<int>(expectedItems.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1983,6 +2039,7 @@ class SlotsCompanion extends UpdateCompanion<Slot> {
           ..write('emoji: $emoji, ')
           ..write('color: $color, ')
           ..write('cabinetId: $cabinetId, ')
+          ..write('expectedItems: $expectedItems, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4542,6 +4599,7 @@ typedef $$SlotsTableCreateCompanionBuilder =
       required String emoji,
       required int color,
       required String cabinetId,
+      Value<int> expectedItems,
       Value<int> rowid,
     });
 typedef $$SlotsTableUpdateCompanionBuilder =
@@ -4551,6 +4609,7 @@ typedef $$SlotsTableUpdateCompanionBuilder =
       Value<String> emoji,
       Value<int> color,
       Value<String> cabinetId,
+      Value<int> expectedItems,
       Value<int> rowid,
     });
 
@@ -4619,6 +4678,11 @@ class $$SlotsTableFilterComposer extends Composer<_$AppDatabase, $SlotsTable> {
 
   ColumnFilters<int> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expectedItems => $composableBuilder(
+    column: $table.expectedItems,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4700,6 +4764,11 @@ class $$SlotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get expectedItems => $composableBuilder(
+    column: $table.expectedItems,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CabinetsTableOrderingComposer get cabinetId {
     final $$CabinetsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4744,6 +4813,11 @@ class $$SlotsTableAnnotationComposer
 
   GeneratedColumn<int> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get expectedItems => $composableBuilder(
+    column: $table.expectedItems,
+    builder: (column) => column,
+  );
 
   $$CabinetsTableAnnotationComposer get cabinetId {
     final $$CabinetsTableAnnotationComposer composer = $composerBuilder(
@@ -4827,6 +4901,7 @@ class $$SlotsTableTableManager
                 Value<String> emoji = const Value.absent(),
                 Value<int> color = const Value.absent(),
                 Value<String> cabinetId = const Value.absent(),
+                Value<int> expectedItems = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SlotsCompanion(
                 id: id,
@@ -4834,6 +4909,7 @@ class $$SlotsTableTableManager
                 emoji: emoji,
                 color: color,
                 cabinetId: cabinetId,
+                expectedItems: expectedItems,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4843,6 +4919,7 @@ class $$SlotsTableTableManager
                 required String emoji,
                 required int color,
                 required String cabinetId,
+                Value<int> expectedItems = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SlotsCompanion.insert(
                 id: id,
@@ -4850,6 +4927,7 @@ class $$SlotsTableTableManager
                 emoji: emoji,
                 color: color,
                 cabinetId: cabinetId,
+                expectedItems: expectedItems,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

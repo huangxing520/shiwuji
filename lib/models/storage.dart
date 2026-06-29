@@ -30,6 +30,7 @@ abstract class Cabinet with _$Cabinet {
     required int items,
     required int occupation,
     required bool hasPhoto,
+    required int expectedItems,
   }) = _Cabinet;
 
   factory Cabinet.fromJson(Map<String, dynamic> json) =>
@@ -45,6 +46,7 @@ abstract class Slot with _$Slot {
     @ColorConverter() required Color color,
     required int items,
     required int occupation,
+    required int expectedItems,
   }) = _Slot;
 
   factory Slot.fromJson(Map<String, dynamic> json) => _$SlotFromJson(json);

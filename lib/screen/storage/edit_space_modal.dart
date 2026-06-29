@@ -3,9 +3,13 @@ import '../../constants/app_colors.dart';
 import '../../widgets/emoji_text.dart';
 import '../../widgets/toast_utils.dart';
 
-/// 编辑回调：用户点击确认时触发，传入新的名称和图标
+/// 编辑回调：用户点击确认时触发，传入新的名称、图标和预期物品数
 typedef EditSpaceCallback =
-    void Function({required String name, required String icon});
+    void Function({
+      required String name,
+      required String icon,
+      int? expectedItems,
+    });
 
 /// 编辑收纳空间模态框（房间/柜体/格子通用，仅编辑名称和图标）
 class EditSpaceModal extends StatefulWidget {
@@ -15,6 +19,8 @@ class EditSpaceModal extends StatefulWidget {
   final List<String> iconOptions;
   final VoidCallback onClose;
   final EditSpaceCallback onConfirm;
+  final int? initialExpectedItems;
+  final bool showExpectedItems;
 
   const EditSpaceModal({
     super.key,
@@ -24,6 +30,8 @@ class EditSpaceModal extends StatefulWidget {
     required this.iconOptions,
     required this.onClose,
     required this.onConfirm,
+    this.initialExpectedItems,
+    this.showExpectedItems = false,
   });
 
   @override
@@ -33,12 +41,14 @@ class EditSpaceModal extends StatefulWidget {
 class _EditSpaceModalState extends State<EditSpaceModal> {
   late TextEditingController _nameController;
   late String _selectedIcon;
+  late int _expectedItems;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
     _selectedIcon = widget.initialIcon;
+    _expectedItems = widget.initialExpectedItems ?? 1;
   }
 
   @override
@@ -53,7 +63,11 @@ class _EditSpaceModalState extends State<EditSpaceModal> {
       ToastUtils.show(context, '请填写名称');
       return;
     }
-    widget.onConfirm(name: name, icon: _selectedIcon);
+    widget.onConfirm(
+      name: name,
+      icon: _selectedIcon,
+      expectedItems: widget.showExpectedItems ? _expectedItems : null,
+    );
   }
 
   @override
@@ -161,14 +175,15 @@ class _EditSpaceModalState extends State<EditSpaceModal> {
                         children: widget.iconOptions.map((icon) {
                           final isSelected = icon == _selectedIcon;
                           return GestureDetector(
-                            onTap: () =>
-                                setState(() => _selectedIcon = icon),
+                            onTap: () => setState(() => _selectedIcon = icon),
                             child: Container(
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.accentGold.withValues(alpha: 0.15)
+                                    ? AppColors.accentGold.withValues(
+                                        alpha: 0.15,
+                                      )
                                     : AppColors.background,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -186,6 +201,61 @@ class _EditSpaceModalState extends State<EditSpaceModal> {
                         }).toList(),
                       ),
                       const SizedBox(height: 22),
+                      // 预期物品数（仅 slot 级别显示）
+                      if (widget.showExpectedItems) ...[
+                        const Text(
+                          '预期物品数',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _buildStepButton(
+                              icon: Icons.remove,
+                              onTap: () => setState(() {
+                                if (_expectedItems > 1) _expectedItems--;
+                              }),
+                            ),
+                            Expanded(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFF0E4D0),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$_expectedItems',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _buildStepButton(
+                              icon: Icons.add,
+                              onTap: () => setState(() => _expectedItems++),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 22),
+                      ],
                       // 确认按钮
                       GestureDetector(
                         onTap: _save,
@@ -224,6 +294,25 @@ class _EditSpaceModalState extends State<EditSpaceModal> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStepButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.accentGold.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.accentGold, width: 1.5),
+        ),
+        child: Icon(icon, size: 20, color: AppColors.accentGold),
       ),
     );
   }

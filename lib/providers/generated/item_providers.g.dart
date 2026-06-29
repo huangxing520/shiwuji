@@ -476,6 +476,103 @@ final class IdleCountProvider extends $FunctionalProvider<int, int, int>
 
 String _$idleCountHash() => r'a75a3d577468fd32fe3b35fc1366cf82fffad4d0';
 
+/// 本周新增物品数量（周一 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本周一，与 drift 表 purchase_date 字段一致。
+
+@ProviderFor(weeklyNewCount)
+final weeklyNewCountProvider = WeeklyNewCountProvider._();
+
+/// 本周新增物品数量（周一 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本周一，与 drift 表 purchase_date 字段一致。
+
+final class WeeklyNewCountProvider extends $FunctionalProvider<int, int, int>
+    with $Provider<int> {
+  /// 本周新增物品数量（周一 00:00 至今）
+  /// 数据口径：Items.purchaseDate >= 本周一，与 drift 表 purchase_date 字段一致。
+  WeeklyNewCountProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'weeklyNewCountProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$weeklyNewCountHash();
+
+  @$internal
+  @override
+  $ProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  int create(Ref ref) {
+    return weeklyNewCount(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$weeklyNewCountHash() => r'0c372b2f3f571691555c3da27896e70d5f8268fe';
+
+/// 本月新增物品总价值（1 日 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本月 1 日，price 求和，与 drift 表字段一致。
+
+@ProviderFor(monthlyGrowth)
+final monthlyGrowthProvider = MonthlyGrowthProvider._();
+
+/// 本月新增物品总价值（1 日 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本月 1 日，price 求和，与 drift 表字段一致。
+
+final class MonthlyGrowthProvider
+    extends $FunctionalProvider<double, double, double>
+    with $Provider<double> {
+  /// 本月新增物品总价值（1 日 00:00 至今）
+  /// 数据口径：Items.purchaseDate >= 本月 1 日，price 求和，与 drift 表字段一致。
+  MonthlyGrowthProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'monthlyGrowthProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$monthlyGrowthHash();
+
+  @$internal
+  @override
+  $ProviderElement<double> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  double create(Ref ref) {
+    return monthlyGrowth(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(double value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<double>(value),
+    );
+  }
+}
+
+String _$monthlyGrowthHash() => r'f8e794d9b7670c6e4833753ecca663ade25324d8';
+
 @ProviderFor(itemById)
 final itemByIdProvider = ItemByIdFamily._();
 

@@ -11,7 +11,7 @@
     <!-- 精确闹钟权限（Android 12+） -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-    <!-- 相机权限（flutter_smart_scanner 扫描物体需要） -->
+    <!-- 相机权限（扫一扫拍照识别物品需要） -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="拾物记"

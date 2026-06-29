@@ -32,4 +32,13 @@ class SlotDao extends DatabaseAccessor<AppDatabase> with _$SlotDaoMixin {
     ).get();
     return result.first.read<int>('total');
   }
+
+  /// 统计某个柜体下所有格位的预期物品数总和
+  Future<int> sumExpectedItems(String cabinetId) async {
+    final result = await customSelect(
+      'SELECT COALESCE(SUM(expected_items), 0) AS total FROM slots WHERE cabinet_id = ?',
+      variables: [Variable.withString(cabinetId)],
+    ).get();
+    return result.first.read<int>('total');
+  }
 }

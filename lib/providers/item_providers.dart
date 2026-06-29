@@ -222,6 +222,40 @@ int idleCount(Ref ref) {
       );
 }
 
+/// 本周新增物品数量（周一 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本周一，与 drift 表 purchase_date 字段一致。
+@riverpod
+int weeklyNewCount(Ref ref) {
+  return ref
+      .watch(itemsProvider)
+      .maybeWhen(
+        data: (items) {
+          final now = DateTime.now();
+          final monday = DateTime(now.year, now.month, now.day - (now.weekday - DateTime.monday));
+          return items.where((i) => !i.purchaseDate.isBefore(monday)).length;
+        },
+        orElse: () => 0,
+      );
+}
+
+/// 本月新增物品总价值（1 日 00:00 至今）
+/// 数据口径：Items.purchaseDate >= 本月 1 日，price 求和，与 drift 表字段一致。
+@riverpod
+double monthlyGrowth(Ref ref) {
+  return ref
+      .watch(itemsProvider)
+      .maybeWhen(
+        data: (items) {
+          final now = DateTime.now();
+          final firstOfMonth = DateTime(now.year, now.month, 1);
+          return items
+              .where((i) => !i.purchaseDate.isBefore(firstOfMonth))
+              .fold<double>(0, (sum, i) => sum + i.price);
+        },
+        orElse: () => 0,
+      );
+}
+
 @riverpod
 Item? itemById(Ref ref, String id) {
   return ref

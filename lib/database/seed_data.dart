@@ -1,563 +1,15 @@
 part of 'database.dart';
 
-/// 种子数据 —— 仅在数据库首次创建时插入
+/// 种子数据 —— 仅在数据库首次创建时插入。
+///
+/// 包含：
+/// - 12 个内置分类（isBuiltIn = true）
+/// - 2 项默认用户设置（昵称、头像）
+/// - 3 个默认收纳空间（卧室、厨房、客厅），每空间含默认柜体和区域
 class SeedData {
-  static List<ItemsCompanion> get items => [
-    ItemsCompanion.insert(
-      id: 'inv_1',
-      name: '戴森V12吸尘器',
-      price: 3990,
-      emoji: const Value('🧹'),
-      category: const Value('家电'),
-      location: const Value('客厅收纳柜'),
-      purchaseDate: DateTime(2024, 6, 15),
-      warrantyDays: const Value(730),
-      status: const Value('safe'),
-      categoryKey: const Value('appliance'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_2',
-      name: 'AirPods Pro 2',
-      price: 1899,
-      emoji: const Value('🎧'),
-      category: const Value('数码'),
-      location: const Value('书房桌面'),
-      purchaseDate: DateTime(2024, 8, 20),
-      warrantyDays: const Value(365),
-      status: const Value('underWarranty'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_3',
-      name: '兰蔻小黑瓶精华',
-      price: 1080,
-      emoji: const Value('💊'),
-      category: const Value('护肤'),
-      location: const Value('卧室梳妆台'),
-      purchaseDate: DateTime(2025, 1, 10),
-      warrantyDays: const Value(180),
-      status: const Value('expiring'),
-      categoryKey: const Value('skincare'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_4',
-      name: '宜家思库布收纳箱×3',
-      price: 149,
-      emoji: const Value('📦'),
-      category: const Value('收纳'),
-      location: const Value('储物间'),
-      purchaseDate: DateTime(2024, 3, 5),
-      warrantyDays: const Value(0),
-      status: const Value('idle'),
-      categoryKey: const Value('storage'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_5',
-      name: '索尼WH-1000XM5',
-      price: 2499,
-      emoji: const Value('🎵'),
-      category: const Value('数码'),
-      location: const Value('书房'),
-      purchaseDate: DateTime(2024, 10, 1),
-      warrantyDays: const Value(365),
-      status: const Value('underWarranty'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_6',
-      name: '美的电饭煲',
-      price: 399,
-      emoji: const Value('🍚'),
-      category: const Value('厨房'),
-      location: const Value('料理台'),
-      purchaseDate: DateTime(2024, 5, 20),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('kitchen'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_7',
-      name: 'SK-II神仙水230ml',
-      price: 1590,
-      emoji: const Value('✨'),
-      category: const Value('护肤'),
-      location: const Value('卧室梳妆台'),
-      purchaseDate: DateTime(2025, 2, 1),
-      warrantyDays: const Value(120),
-      status: const Value('expiring'),
-      categoryKey: const Value('skincare'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_8',
-      name: '乐高建筑系列·悉尼',
-      price: 599,
-      emoji: const Value('📕'),
-      category: const Value('书籍'),
-      location: const Value('书架第二层'),
-      purchaseDate: DateTime(2024, 1, 15),
-      warrantyDays: const Value(0),
-      status: const Value('idle'),
-      categoryKey: const Value('books'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_9',
-      name: '优衣库轻薄羽绒服',
-      price: 499,
-      emoji: const Value('👔'),
-      category: const Value('衣物'),
-      location: const Value('衣柜左侧'),
-      purchaseDate: DateTime(2024, 11, 10),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('clothing'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_10',
-      name: 'iPhone 15手机壳',
-      price: 89,
-      emoji: const Value('📱'),
-      category: const Value('数码'),
-      location: const Value('书房抽屉'),
-      purchaseDate: DateTime(2024, 2, 28),
-      warrantyDays: const Value(0),
-      status: const Value('idle'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_11',
-      name: '不粘煎锅26cm',
-      price: 159,
-      emoji: const Value('🍳'),
-      category: const Value('厨房'),
-      location: const Value('厨房吊柜'),
-      purchaseDate: DateTime(2024, 7, 8),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('kitchen'),
-    ),
-    ItemsCompanion.insert(
-      id: 'inv_12',
-      name: '设计中的设计·原研哉',
-      price: 48,
-      emoji: const Value('📖'),
-      category: const Value('书籍'),
-      location: const Value('书架第一层'),
-      purchaseDate: DateTime(2024, 4, 22),
-      warrantyDays: const Value(0),
-      status: const Value('safe'),
-      categoryKey: const Value('books'),
-    ),
-    // 原 item_providers.dart 的种子数据
-    ItemsCompanion.insert(
-      id: 'seed_1',
-      name: 'AirPods Pro',
-      price: 1899,
-      emoji: const Value('🎧'),
-      category: const Value('电子产品'),
-      location: const Value('书桌'),
-      purchaseDate: DateTime(2025, 7, 1),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'seed_2',
-      name: '耳机',
-      price: 799,
-      emoji: const Value('🎧'),
-      category: const Value('电子产品'),
-      location: const Value('书桌'),
-      purchaseDate: DateTime(2025, 7, 5),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'seed_3',
-      name: 'MacBook Pro',
-      price: 12999,
-      emoji: const Value('💻'),
-      category: const Value('电子产品'),
-      location: const Value('书桌'),
-      purchaseDate: DateTime(2024, 1, 15),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('digital'),
-    ),
-    ItemsCompanion.insert(
-      id: 'seed_4',
-      name: '咖啡机',
-      price: 499,
-      emoji: const Value('☕'),
-      category: const Value('厨房'),
-      location: const Value('厨房'),
-      purchaseDate: DateTime(2024, 3, 20),
-      warrantyDays: const Value(730),
-      status: const Value('safe'),
-      categoryKey: const Value('kitchen'),
-    ),
-    ItemsCompanion.insert(
-      id: 'seed_5',
-      name: '背包',
-      price: 299,
-      emoji: const Value('🎒'),
-      category: const Value('服饰'),
-      location: const Value('衣柜'),
-      purchaseDate: DateTime(2024, 5, 10),
-      warrantyDays: const Value(365),
-      status: const Value('safe'),
-      categoryKey: const Value('clothing'),
-    ),
-  ];
-
-  static List<RoomsCompanion> get rooms => [
-    RoomsCompanion.insert(
-      id: 'r1',
-      name: '客厅',
-      emoji: '🛋️',
-      color: 0xFFFFE8CC,
-    ),
-    RoomsCompanion.insert(
-      id: 'r2',
-      name: '卧室',
-      emoji: '🛏️',
-      color: 0xFFE8F5E9,
-    ),
-    RoomsCompanion.insert(id: 'r3', name: '书房', emoji: '📚', color: 0xFFD4E8FF),
-    RoomsCompanion.insert(id: 'r4', name: '厨房', emoji: '🍳', color: 0xFFFFD4D4),
-    RoomsCompanion.insert(
-      id: 'r5',
-      name: '储物间',
-      emoji: '🗄️',
-      color: 0xFFE4DAFF,
-    ),
-  ];
-
-  static List<CabinetsCompanion> get cabinets => [
-    // 客厅
-    CabinetsCompanion.insert(
-      id: 'c1',
-      name: '电视柜',
-      emoji: '📺',
-      color: 0xFFFFE8CC,
-      roomId: 'r1',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c2',
-      name: '收纳柜',
-      emoji: '🗄️',
-      color: 0xFFFFE8CC,
-      roomId: 'r1',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c3',
-      name: '茶几抽屉',
-      emoji: '☕',
-      color: 0xFFFFE8CC,
-      roomId: 'r1',
-    ),
-    // 卧室
-    CabinetsCompanion.insert(
-      id: 'c4',
-      name: '衣柜',
-      emoji: '👔',
-      color: 0xFFE8F5E9,
-      roomId: 'r2',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c5',
-      name: '梳妆台',
-      emoji: '💄',
-      color: 0xFFE8F5E9,
-      roomId: 'r2',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c6',
-      name: '床头柜',
-      emoji: '💡',
-      color: 0xFFE8F5E9,
-      roomId: 'r2',
-    ),
-    CabinetsCompanion.insert(
-      id: 'c7',
-      name: '斗柜',
-      emoji: '🧱',
-      color: 0xFFE8F5E9,
-      roomId: 'r2',
-    ),
-    // 书房
-    CabinetsCompanion.insert(
-      id: 'c8',
-      name: '书架',
-      emoji: '📚',
-      color: 0xFFD4E8FF,
-      roomId: 'r3',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c9',
-      name: '桌面',
-      emoji: '🖥️',
-      color: 0xFFD4E8FF,
-      roomId: 'r3',
-    ),
-    CabinetsCompanion.insert(
-      id: 'c10',
-      name: '抽屉柜',
-      emoji: '🗄️',
-      color: 0xFFD4E8FF,
-      roomId: 'r3',
-    ),
-    // 厨房
-    CabinetsCompanion.insert(
-      id: 'c11',
-      name: '吊柜',
-      emoji: '🍳',
-      color: 0xFFFFD4D4,
-      roomId: 'r4',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c12',
-      name: '料理台',
-      emoji: '🔪',
-      color: 0xFFFFD4D4,
-      roomId: 'r4',
-    ),
-    // 储物间
-    CabinetsCompanion.insert(
-      id: 'c13',
-      name: '置物架A',
-      emoji: '📦',
-      color: 0xFFE4DAFF,
-      roomId: 'r5',
-      hasPhoto: const Value(true),
-    ),
-    CabinetsCompanion.insert(
-      id: 'c14',
-      name: '置物架B',
-      emoji: '📦',
-      color: 0xFFE4DAFF,
-      roomId: 'r5',
-    ),
-  ];
-
-  static List<SlotsCompanion> get slots => [
-    // 收纳柜 c2
-    SlotsCompanion.insert(
-      id: 's1',
-      name: '上层·日常杂物',
-      emoji: '🔋',
-      color: 0xFFFFF3CC,
-      cabinetId: 'c2',
-    ),
-    SlotsCompanion.insert(
-      id: 's2',
-      name: '中层·电子配件',
-      emoji: '🔌',
-      color: 0xFFFFF3CC,
-      cabinetId: 'c2',
-    ),
-    SlotsCompanion.insert(
-      id: 's3',
-      name: '下层·工具备用',
-      emoji: '🔧',
-      color: 0xFFFFF3CC,
-      cabinetId: 'c2',
-    ),
-    // 衣柜 c4
-    SlotsCompanion.insert(
-      id: 's4',
-      name: '左区·上衣区',
-      emoji: '👔',
-      color: 0xFFD4F5D9,
-      cabinetId: 'c4',
-    ),
-    SlotsCompanion.insert(
-      id: 's5',
-      name: '右区·裤裙区',
-      emoji: '👖',
-      color: 0xFFD4F5D9,
-      cabinetId: 'c4',
-    ),
-    SlotsCompanion.insert(
-      id: 's6',
-      name: '顶层·换季收纳',
-      emoji: '🧣',
-      color: 0xFFD4F5D9,
-      cabinetId: 'c4',
-    ),
-    // 书架 c8
-    SlotsCompanion.insert(
-      id: 's7',
-      name: '第一层·常用书',
-      emoji: '📖',
-      color: 0xFFD4E8FF,
-      cabinetId: 'c8',
-    ),
-    SlotsCompanion.insert(
-      id: 's8',
-      name: '第二层·技术书',
-      emoji: '💻',
-      color: 0xFFD4E8FF,
-      cabinetId: 'c8',
-    ),
-    SlotsCompanion.insert(
-      id: 's9',
-      name: '第三层·收藏',
-      emoji: '📦',
-      color: 0xFFD4E8FF,
-      cabinetId: 'c8',
-    ),
-  ];
-
-  static List<SpaceItemsCompanion> get spaceItems => [
-    // s1: 上层·日常杂物
-    SpaceItemsCompanion.insert(
-      emoji: '🔋',
-      name: '南孚电池AA×24',
-      meta: '日用 · 购入2024-06',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '💡',
-      name: 'LED灯泡E27×6',
-      meta: '照明 · 购入2024-03',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '📎',
-      name: '得力回形针盒',
-      meta: '文具 · 购入2024-08',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🧴',
-      name: '除湿盒×3',
-      meta: '日用 · 购入2025-01',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🧹',
-      name: '粘毛滚筒替换装',
-      meta: '清洁 · 购入2025-04',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🔌',
-      name: '魔方插座',
-      meta: '数码 · 购入2024-11',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '✂️',
-      name: '得力剪刀',
-      meta: '文具 · 购入2024-02',
-      slotId: 's1',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🧻',
-      name: '保鲜膜套装',
-      meta: '日用 · 购入2025-03',
-      slotId: 's1',
-    ),
-    // s2: 中层·电子配件
-    SpaceItemsCompanion.insert(
-      emoji: '🔌',
-      name: 'Type-C数据线×3',
-      meta: '数码 · 购入2024-12',
-      slotId: 's2',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🎧',
-      name: '3.5mm音频线',
-      meta: '数码 · 购入2024-09',
-      slotId: 's2',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '📱',
-      name: 'iPhone充电器',
-      meta: '数码 · 购入2024-10',
-      slotId: 's2',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🖱️',
-      name: '鼠标接收器',
-      meta: '数码 · 购入2024-07',
-      slotId: 's2',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '💾',
-      name: 'U盘128GB',
-      meta: '数码 · 购入2024-05',
-      slotId: 's2',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🔋',
-      name: '充电宝20000mAh',
-      meta: '数码 · 购入2024-08',
-      slotId: 's2',
-    ),
-    // s3: 下层·工具备用
-    SpaceItemsCompanion.insert(
-      emoji: '🔧',
-      name: '多功能螺丝刀套装',
-      meta: '工具 · 购入2024-01',
-      slotId: 's3',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🔨',
-      name: '羊角锤',
-      meta: '工具 · 购入2023-12',
-      slotId: 's3',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '📐',
-      name: '卷尺5m',
-      meta: '工具 · 购入2024-04',
-      slotId: 's3',
-    ),
-    SpaceItemsCompanion.insert(
-      emoji: '🩹',
-      name: '工具胶水套装',
-      meta: '工具 · 购入2024-06',
-      slotId: 's3',
-    ),
-  ];
-
-  static List<ImportHistoryCompanion> get importHistory => [
-    ImportHistoryCompanion.insert(
-      platformKey: 'taobao',
-      emoji: '🛍',
-      title: '淘宝订单导入',
-      meta: '2025-05-28 14:32 · 全部历史订单',
-      count: 186,
-      iconBg: 0xFFFF6B00,
-      importedAt: Value(DateTime(2025, 5, 28, 14, 32)),
-    ),
-    ImportHistoryCompanion.insert(
-      platformKey: 'jd',
-      emoji: '📦',
-      title: '京东订单导入',
-      meta: '2025-05-20 09:15 · 近6个月',
-      count: 94,
-      iconBg: 0xFFE4393C,
-      importedAt: Value(DateTime(2025, 5, 20, 9, 15)),
-    ),
-    ImportHistoryCompanion.insert(
-      platformKey: 'taobao',
-      emoji: '🛒',
-      title: '淘宝订单导入',
-      meta: '2025-04-12 20:48 · 近1年',
-      count: 52,
-      iconBg: 0xFFFF6B00,
-      importedAt: Value(DateTime(2025, 4, 12, 20, 48)),
-    ),
-  ];
+  // ────────────────────────────────────────────────
+  // 分类（内置，isBuiltIn = true）
+  // ────────────────────────────────────────────────
 
   static List<CategoriesCompanion> get categories => [
     CategoriesCompanion.insert(
@@ -646,8 +98,99 @@ class SeedData {
     ),
   ];
 
+  // ────────────────────────────────────────────────
+  // 用户设置（默认值）
+  // ────────────────────────────────────────────────
+
   static List<SettingsCompanion> get settings => [
     SettingsCompanion.insert(key: 'nickname', value: const Value('小橘')),
     SettingsCompanion.insert(key: 'avatar_emoji', value: const Value('🧑')),
   ];
+
+  // ────────────────────────────────────────────────
+  // 默认收纳空间（3 个房间 → 3 个柜体 → 3 个区域）
+  // ────────────────────────────────────────────────
+
+  static List<RoomsCompanion> get defaultRooms => [
+    RoomsCompanion.insert(
+      id: 'room_bedroom',
+      name: '卧室',
+      emoji: '🛏️',
+      color: 0xFFE8F5E9,
+    ),
+    RoomsCompanion.insert(
+      id: 'room_kitchen',
+      name: '厨房',
+      emoji: '🍳',
+      color: 0xFFFFD4D4,
+    ),
+    RoomsCompanion.insert(
+      id: 'room_living',
+      name: '客厅',
+      emoji: '🛋️',
+      color: 0xFFFFE8CC,
+    ),
+  ];
+
+  static List<CabinetsCompanion> get defaultCabinets => [
+    // 卧室
+    CabinetsCompanion.insert(
+      id: 'cab_bedroom_wardrobe',
+      name: '主柜体',
+      emoji: '👔',
+      color: 0xFFE8F5E9,
+      roomId: 'room_bedroom',
+      hasPhoto: const Value(true),
+    ),
+    // 厨房
+    CabinetsCompanion.insert(
+      id: 'cab_kitchen_upper',
+      name: '主柜体',
+      emoji: '🍽️',
+      color: 0xFFFFD4D4,
+      roomId: 'room_kitchen',
+      hasPhoto: const Value(true),
+    ),
+    // 客厅
+    CabinetsCompanion.insert(
+      id: 'cab_living_tvstand',
+      name: '主柜体',
+      emoji: '📺',
+      color: 0xFFFFE8CC,
+      roomId: 'room_living',
+      hasPhoto: const Value(true),
+    ),
+  ];
+
+  static List<SlotsCompanion> get defaultSlots => [
+    // 卧室 · 衣柜
+    SlotsCompanion.insert(
+      id: 'slot_wardrobe_main',
+      name: '主区域',
+      emoji: '👔',
+      color: 0xFFD4F5D9,
+      cabinetId: 'cab_bedroom_wardrobe',
+    ),
+    // 厨房 · 吊柜
+    SlotsCompanion.insert(
+      id: 'slot_kitchen_main',
+      name: '主区域',
+      emoji: '🍽️',
+      color: 0xFFFFEBEB,
+      cabinetId: 'cab_kitchen_upper',
+    ),
+    // 客厅 · 电视柜
+    SlotsCompanion.insert(
+      id: 'slot_living_main',
+      name: '主区域',
+      emoji: '📺',
+      color: 0xFFFFF3CC,
+      cabinetId: 'cab_living_tvstand',
+    ),
+  ];
+
+  // Items、SpaceItems、ImportHistory 不再预置种子数据，首次安装后为空表。
+  static List<ItemsCompanion> get items => [];
+  static List<SpaceItemsCompanion> get spaceItems => [];
+  static List<ImportHistoryCompanion> get importHistory => [];
 }

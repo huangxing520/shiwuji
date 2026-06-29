@@ -49,8 +49,8 @@ class _MePageState extends ConsumerState<MePage> {
                         FeatureMenuSection(
                           onHelpTap: () => HelpFeedbackSheet.show(context),
                         ),
-                        const SizedBox(height: 32),
-                        _buildVersionInfo(),
+                        //const SizedBox(height: 32),
+                        //_buildVersionInfo(),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -143,22 +143,16 @@ class _MePageState extends ConsumerState<MePage> {
           GestureDetector(
             onTap: () => context.push('/scan'),
             child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.cardBg,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.5),
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.document_scanner_outlined,
-                size: 22,
-                color: AppColors.primary,
-              ),
-            ),
+    width: 38,
+    height: 38,
+    decoration: BoxDecoration(
+      color: Color(0xFFFFF3DD), // 和头像背景同色系浅暖黄
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Center(
+      child: Icon(Icons.crop_free, size: 22, color: Color(0xFF33281E)),
+    ),
+  ),
           ),
         ],
       ),

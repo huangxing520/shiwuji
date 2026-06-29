@@ -51,11 +51,6 @@ android {
         release {
             // 正式签名：从 android/key.properties 读取
             signingConfig = signingConfigs.getByName("release")
-            // 加载自定义 ProGuard 规则（R8 混淆时保留 google_mlkit 反射用到的类）
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
 }

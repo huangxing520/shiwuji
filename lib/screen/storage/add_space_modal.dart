@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/toast_utils.dart';
@@ -13,6 +14,7 @@ typedef AddSpaceCallback =
       required String parentId,
       required String name,
       required String icon,
+      int expectedItems,
     });
 
 /// 新增收纳空间模态框
@@ -43,9 +45,16 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
   late String _parentId; // 实际 ID（room id 或 cabinet id）
   String _addName = '';
   String _selectedIcon = '🛋️';
+  int _expectedItems = 1;
   // slot 级别专用：用户选择的房间 ID（用于级联筛选柜体）
   // 初始为 currentRoomId，若为空则等房间列表加载后取第一个
   String? _slotParentRoomId;
+
+  // 预期物品数量输入控制器
+  final TextEditingController _expectedItemsController =
+      TextEditingController();
+  final FocusNode _expectedItemsFocusNode = FocusNode();
+  static const int _maxExpectedItems = 100;
 
   final List<String> _iconOptions = [
     '🛋️',
@@ -83,6 +92,55 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
       _addLevel = 'room';
       _parentId = '';
     }
+
+    // 初始化预期物品数量控制器
+    _expectedItemsController.text = '$_expectedItems';
+    _expectedItemsFocusNode.addListener(_onExpectedItemsFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _expectedItemsController.dispose();
+    _expectedItemsFocusNode.removeListener(_onExpectedItemsFocusChange);
+    _expectedItemsFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onExpectedItemsFocusChange() {
+    // 当输入框失去焦点时，确认输入值
+    if (!_expectedItemsFocusNode.hasFocus) {
+      _confirmExpectedItemsInput();
+    }
+  }
+
+  void _confirmExpectedItemsInput() {
+    final text = _expectedItemsController.text;
+    if (text.isEmpty) {
+      // 如果输入为空，恢复为当前值
+      _expectedItemsController.text = '$_expectedItems';
+      return;
+    }
+
+    final value = int.tryParse(text);
+    if (value == null) {
+      // 如果输入不是数字，恢复为当前值
+      _expectedItemsController.text = '$_expectedItems';
+      ToastUtils.show(context, '请输入有效的数字');
+      return;
+    }
+
+    // 验证范围
+    if (value < 1) {
+      _expectedItems = 1;
+      _expectedItemsController.text = '$_expectedItems';
+      ToastUtils.show(context, '数量不能小于1');
+    } else if (value > _maxExpectedItems) {
+      _expectedItems = _maxExpectedItems;
+      _expectedItemsController.text = '$_expectedItems';
+      ToastUtils.show(context, '数量不能大于$_maxExpectedItems');
+    } else {
+      _expectedItems = value;
+    }
   }
 
   void _save() {
@@ -99,6 +157,7 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
       parentId: _parentId,
       name: _addName,
       icon: _selectedIcon,
+      expectedItems: _expectedItems,
     );
   }
 
@@ -168,6 +227,9 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
                       _buildFormRow('空间名称', _buildNameInput(), required: true),
                       // 选择图标
                       _buildFormRow('选择图标', _buildIconGrid()),
+                      // 预期物品数（仅 slot 级别）
+                      if (_addLevel == 'slot')
+                        _buildFormRow('预期物品数', _buildExpectedItemsInput()),
                       // 上传实景图
                       _buildFormRow('上传实景图', _buildPhotoUpload()),
                       const SizedBox(height: 6),
@@ -556,12 +618,100 @@ class _AddSpaceModalState extends ConsumerState<AddSpaceModal> {
                 width: 2,
               ),
             ),
-            child: Center(
-              child: EmojiText(emoji: icon, fontSize: 24),
-            ),
+            child: Center(child: EmojiText(emoji: icon, fontSize: 24)),
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildExpectedItemsInput() {
+    return Row(
+      children: [
+        _buildStepButton(
+          icon: Icons.remove,
+          onTap: () {
+            if (_expectedItems > 1) {
+              setState(() {
+                _expectedItems--;
+                _expectedItemsController.text = '$_expectedItems';
+              });
+            }
+          },
+        ),
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF0E4D0), width: 1.5),
+            ),
+            child: TextField(
+              controller: _expectedItemsController,
+              focusNode: _expectedItemsFocusNode,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 11),
+                isDense: true,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) {
+                // 实时验证输入
+                if (value.isNotEmpty) {
+                  final intValue = int.tryParse(value);
+                  if (intValue != null) {
+                    if (intValue >= 1 && intValue <= _maxExpectedItems) {
+                      _expectedItems = intValue;
+                    }
+                  }
+                }
+              },
+              onSubmitted: (value) {
+                // 按下回车键时确认输入
+                _confirmExpectedItemsInput();
+              },
+            ),
+          ),
+        ),
+        _buildStepButton(
+          icon: Icons.add,
+          onTap: () {
+            if (_expectedItems < _maxExpectedItems) {
+              setState(() {
+                _expectedItems++;
+                _expectedItemsController.text = '$_expectedItems';
+              });
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.accentGold.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.accentGold, width: 1.5),
+        ),
+        child: Icon(icon, size: 20, color: AppColors.accentGold),
+      ),
     );
   }
 

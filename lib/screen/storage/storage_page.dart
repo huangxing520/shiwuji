@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/emoji_text.dart';
@@ -96,6 +96,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     required String parentId,
     required String name,
     required String icon,
+    int expectedItems = 1,
   }) {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final id = '${level}_$ts';
@@ -163,6 +164,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 emoji: icon,
                 color: color,
                 cabinetId: parentId,
+                expectedItems: expectedItems,
               );
         }
         break;
@@ -356,6 +358,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                     parentId: cabinetId,
                     name: slot.name,
                     emoji: slot.emoji,
+                    expectedItems: slot.expectedItems,
                   ),
                 );
               },
@@ -397,7 +400,11 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     });
   }
 
-  void _onEditConfirm({required String name, required String icon}) {
+  void _onEditConfirm({
+    required String name,
+    required String icon,
+    int? expectedItems,
+  }) {
     final t = _editTarget;
     if (t == null) return;
     switch (t.kind) {
@@ -424,6 +431,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
               cabinetId: t.parentId!,
               name: name,
               emoji: icon,
+              expectedItems: expectedItems,
             );
         break;
     }
@@ -771,6 +779,8 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                 iconOptions: _editTarget!.iconOptions,
                 onClose: _closeEditModal,
                 onConfirm: _onEditConfirm,
+                showExpectedItems: _editTarget!.kind == _EditKind.slot,
+                initialExpectedItems: _editTarget!.expectedItems,
               ),
             if (_showItemsModal) _buildItemsModalFromProvider(),
             if (_batchProcessing)
@@ -1532,6 +1542,8 @@ class _SpaceCard extends StatelessWidget {
   int get itemCount => cabinet?.items ?? slot?.items ?? 0;
   int get occupation => cabinet?.occupation ?? slot?.occupation ?? 0;
   bool get hasPhoto => cabinet?.hasPhoto ?? false;
+  int get expectedItems => cabinet?.expectedItems ?? slot?.expectedItems ?? 0;
+  bool get isCabinet => cabinet != null;
 
   @override
   Widget build(BuildContext context) {
@@ -1660,6 +1672,36 @@ class _SpaceCard extends StatelessWidget {
                               color: AppColors.textHint,
                             ),
                           ),
+                          if (cabinet != null || slot != null) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _buildMetricBadge(
+                                  '预期 $expectedItems',
+                                  color: const Color(0xFFE5A500),
+                                  bgColor: const Color(0xFFFFF4D6),
+                                ),
+                                const SizedBox(width: 6),
+                                _buildMetricBadge(
+                                  '占用率 $occupation%',
+                                  color: occupation > 100
+                                      ? AppColors.danger
+                                      : (occupation > 80
+                                            ? AppColors.danger
+                                            : (occupation > 50
+                                                  ? const Color(0xFFE5A500)
+                                                  : const Color(0xFF3A9E4A))),
+                                  bgColor: occupation > 100
+                                      ? const Color(0xFFFFE0E0)
+                                      : (occupation > 80
+                                            ? const Color(0xFFFFE0E0)
+                                            : (occupation > 50
+                                                  ? const Color(0xFFFFF4D6)
+                                                  : const Color(0xFFD4F5D9))),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1738,6 +1780,28 @@ class _SpaceCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildMetricBadge(
+    String label, {
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 // ========== 面包屑数据类 ==========
@@ -1757,6 +1821,7 @@ class _EditTarget {
   final String? parentId; // cabinet: roomId; slot: cabinetId
   final String name;
   final String emoji;
+  final int? expectedItems;
 
   const _EditTarget({
     required this.kind,
@@ -1764,6 +1829,7 @@ class _EditTarget {
     this.parentId,
     required this.name,
     required this.emoji,
+    this.expectedItems,
   });
 
   String get title {

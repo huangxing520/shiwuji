@@ -4,12 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/models/category_item.dart';
 import 'package:shi_wu_ji/models/template.dart';
 import 'package:shi_wu_ji/models/picker_item.dart';
 import 'package:shi_wu_ji/models/emoji_classifier.dart';
 import 'package:shi_wu_ji/models/item.dart';
 import 'package:shi_wu_ji/widgets/app_dropdown_button.dart';
 import 'package:shi_wu_ji/widgets/emoji_text.dart';
+import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/providers/storage_providers.dart';
 import 'package:shi_wu_ji/providers/category_provider.dart';
@@ -17,11 +19,32 @@ import 'package:shi_wu_ji/services/notification_service.dart';
 import 'package:shi_wu_ji/services/photo_service.dart';
 
 // ==================== 主页面 ====================
+
+/// 扫一扫识别结果预填充数据，用于从扫描页跳转到新建物品页时回填表单。
+class AddItemInitialValues {
+  final String name;
+  final String? category;
+  final String? brand;
+  final String? description;
+  final String? photoPath;
+
+  const AddItemInitialValues({
+    required this.name,
+    this.category,
+    this.brand,
+    this.description,
+    this.photoPath,
+  });
+}
+
 class AddItemPage extends ConsumerStatefulWidget {
   /// 编辑模式时传入的物品 id；新增模式为 null
   final String? itemId;
 
-  const AddItemPage({super.key, this.itemId});
+  /// 扫一扫识别结果预填充数据；仅新增模式且非编辑时生效
+  final AddItemInitialValues? initialValues;
+
+  const AddItemPage({super.key, this.itemId, this.initialValues});
 
   @override
   ConsumerState<AddItemPage> createState() => _AddItemPageState();
@@ -59,6 +82,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
   // 编辑模式下记录原始照片路径，用于提交时清理被删除的文件
   List<String> _originalPhotos = const [];
+
+  // 扫一扫预填充：待匹配的 AI 分类标签（数据库分类异步加载完成后再匹配）
+  String? _pendingCategoryLabel;
 
   // 提醒开关
   bool _expiryOn = false;
@@ -104,10 +130,19 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _brandController.addListener(_updateEmoji);
     _noteController.addListener(_updateEmoji);
 
-    // 编辑模式：从数据库预填充；新增模式：始终为空白表单
+    // 编辑模式：从数据库预填充；扫一扫：用识别结果预填充；其余新增模式：空白表单
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isEdit) {
         _prefillFromItem();
+      } else if (widget.initialValues != null) {
+        _prefillFromScanResult();
+      }
+    });
+
+    // 监听分类数据加载完成，匹配扫一扫预填充的分类标签
+    ref.listenManual(categoryManagerProvider, (prev, next) {
+      if (next.hasValue && _pendingCategoryLabel != null) {
+        _tryMatchPendingCategory();
       }
     });
   }
@@ -203,32 +238,70 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     setState(() {});
   }
 
+  // ==================== 扫一扫预填充 ====================
+  void _prefillFromScanResult() {
+    final iv = widget.initialValues;
+    if (iv == null) return;
+
+    _nameController.text = iv.name;
+    if (iv.brand != null && iv.brand!.isNotEmpty) {
+      _brandController.text = iv.brand!;
+    }
+    if (iv.description != null && iv.description!.isNotEmpty) {
+      _noteController.text = iv.description!;
+    }
+    if (iv.photoPath != null && iv.photoPath!.isNotEmpty) {
+      _photos
+        ..clear()
+        ..add(PhotoEntry(path: iv.photoPath!, status: PhotoStatus.success));
+    }
+    // 分类需匹配数据库分类（异步），暂存标签等待 provider 就绪后匹配
+    if (iv.category != null && iv.category!.isNotEmpty) {
+      _pendingCategoryLabel = iv.category;
+      _tryMatchPendingCategory();
+    }
+    _updateEmoji();
+    setState(() {});
+  }
+
+  /// 将 AI 返回的分类标签匹配到数据库分类，命中则设置 _selectedCategory/_selectedCategoryKey。
+  /// 数据库分类尚未加载时跳过，由 build 中 watch 触发重试。
+  void _tryMatchPendingCategory() {
+    final label = _pendingCategoryLabel;
+    if (label == null) return;
+    final dbCats = ref.read(categoryManagerProvider).value ?? const [];
+    if (dbCats.isEmpty) return;
+
+    CategoryItem? match;
+    for (final c in dbCats) {
+      if (c.label == label) {
+        match = c;
+        break;
+      }
+    }
+    // 精确匹配失败时尝试包含关系兜底（如 AI 返回"数码电子"匹配"数码"）
+    if (match == null) {
+      for (final c in dbCats) {
+        if (label.contains(c.label) || c.label.contains(label)) {
+          match = c;
+          break;
+        }
+      }
+    }
+    if (match != null) {
+      _selectedTemplate = 'none';
+      _selectedCategory = match.label;
+      _selectedCategoryKey = match.id;
+    }
+    _pendingCategoryLabel = null;
+    setState(() {});
+  }
+
   // ==================== Toast ====================
   void _showToast(String message) {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.hideCurrentSnackBar();
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppColors.textPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        margin: const EdgeInsets.only(
-          top: 60,
-          left: 80,
-          right: 80,
-          bottom: 700,
-        ),
-      ),
-    );
+    // 使用 Overlay 实现的顶部 Toast，避免 SnackBar floating 在底部按钮/模板字段
+    // 占用较多垂直空间时触发 "Floating SnackBar presented off screen" 断言。
+    ToastUtils.show(context, message);
   }
 
   // ==================== 照片操作 ====================
@@ -557,6 +630,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     // 通用物品创建流程：必须手动选择分类（非通用模版已自动绑定分类）
     if (_selectedTemplate == 'none' && _selectedCategory == null) {
       _showToast('请选择物品分类');
+      FocusScope.of(context).unfocus();
+      return;
+    }
+
+    // 必须选择收纳位置
+    if (_selectedLocation == null) {
+      _showToast('请选择收纳位置');
       FocusScope.of(context).unfocus();
       return;
     }
@@ -1302,7 +1382,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLabel('收纳位置'),
+                  _buildLabel('收纳位置', required: true),
                   const SizedBox(height: 6),
                   _buildSelectTrigger(
                     text: _selectedLocation ?? '选择位置',
@@ -1321,7 +1401,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         _buildInput(
           controller: _noteController,
           placeholder: '记录一些补充信息…',
-          maxLines: 2,
+          maxLines: 4,
         ),
       ],
     );
@@ -1790,6 +1870,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
             hintStyle: TextStyle(color: AppColors.textHint, fontSize: fontSize),
             contentPadding:
                 padding ??
+                //const EdgeInsets.fromLTRB(14, 11, 4, 11),
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             border: InputBorder.none,
             suffixIcon: suffix,
@@ -1824,13 +1905,17 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                color: disabled
-                    ? AppColors.textSecondary
-                    : (hasValue ? AppColors.textPrimary : AppColors.textHint),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: disabled
+                      ? AppColors.textSecondary
+                      : (hasValue ? AppColors.textPrimary : AppColors.textHint),
+                ),
               ),
             ),
             Icon(

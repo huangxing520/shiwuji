@@ -7,6 +7,8 @@ class DataCardsSection extends StatelessWidget {
   final int totalValue;
   final int pendingCount;
   final int idleCount;
+  final int weeklyNewCount;
+  final double monthlyGrowth;
 
   const DataCardsSection({
     super.key,
@@ -14,6 +16,8 @@ class DataCardsSection extends StatelessWidget {
     required this.totalValue,
     required this.pendingCount,
     required this.idleCount,
+    required this.weeklyNewCount,
+    required this.monthlyGrowth,
   });
 
   @override
@@ -33,7 +37,7 @@ class DataCardsSection extends StatelessWidget {
             target: itemCount,
             unit: '件',
             label: '物品总数',
-            trendLabel: '12 本周新增',
+            trendLabel: '$weeklyNewCount 本周新增',
             trendUp: true,
             color: AppColors.accentGold,
             decoColor: AppColors.shimmerGold,
@@ -46,8 +50,8 @@ class DataCardsSection extends StatelessWidget {
             target: totalValue,
             unit: '元',
             label: '总资产价值',
-            trendLabel: '3,280 本月',
-            trendUp: true,
+            trendLabel: '${_formatCurrency(monthlyGrowth.toInt())} 本月增长',
+            trendUp: monthlyGrowth > 0,
             color: AppColors.warning,
             decoColor: AppColors.shimmerOrange,
             iconBgColor: AppColors.warning.withValues(alpha: 0.15),
@@ -83,5 +87,19 @@ class DataCardsSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 格式化金额为千分位字符串，与 drift 系统数值展示格式一致。
+  /// 例如：3280 → '3,280'，0 → '0'。
+  static String _formatCurrency(int value) {
+    if (value == 0) return '0';
+    final chars = value.abs().toString().split('');
+    final buf = StringBuffer();
+    if (value < 0) buf.write('-');
+    for (var i = 0; i < chars.length; i++) {
+      if (i > 0 && (chars.length - i) % 3 == 0) buf.write(',');
+      buf.write(chars[i]);
+    }
+    return buf.toString();
   }
 }

@@ -46,7 +46,7 @@ final class RoomsProvider
   }
 }
 
-String _$roomsHash() => r'0069ee51bb8a3597f6ee3bf09428e6d485795d01';
+String _$roomsHash() => r'eb5d371650a45ec05fc79b4ff07c50f620fe6196';
 
 /// 新增房间
 
@@ -155,7 +155,7 @@ final class CabinetsByRoomProvider
   }
 }
 
-String _$cabinetsByRoomHash() => r'75b69cccb833516538ea2cb3bcab1455e4c9d32e';
+String _$cabinetsByRoomHash() => r'b44e013c8c846eed5702c3c95dc82338c3547acc';
 
 final class CabinetsByRoomFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.Cabinet>>, String> {
@@ -280,7 +280,7 @@ final class SlotsByCabinetProvider
   }
 }
 
-String _$slotsByCabinetHash() => r'4be61bd3d9c6236e546dec12191d51a2174adce3';
+String _$slotsByCabinetHash() => r'8f6c7a4fbe213fc933d2bd9e3a7601016df14b3d';
 
 final class SlotsByCabinetFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.Slot>>, String> {
@@ -328,7 +328,7 @@ final class SlotActionsProvider
   SlotActions create() => SlotActions();
 }
 
-String _$slotActionsHash() => r'cad1e597547c8d09a4960be936913c11302f08a5';
+String _$slotActionsHash() => r'ac8c556cb4662ddc54196014f5342486ec9eb846';
 
 /// 新增格位
 

@@ -4,6 +4,7 @@ import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/constants/app_text_styles.dart';
 import 'package:shi_wu_ji/constants/app_shadows.dart';
 import 'package:shi_wu_ji/widgets/gradient_background.dart';
+import 'package:shi_wu_ji/services/first_run_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -49,6 +50,7 @@ class _SplashPageState extends State<SplashPage> {
             });
             Future.delayed(const Duration(milliseconds: 500), () {
               if (mounted) {
+                FirstRunService.markCompleted();
                 context.go('/home');
               }
             });
@@ -118,11 +120,7 @@ class _SplashPageState extends State<SplashPage> {
               boxShadow: AppShadows.logo,
             ),
             child: const Center(
-              child: Icon(
-                Icons.inventory_2,
-                size: 64,
-                color: Colors.white,
-              ),
+              child: Icon(Icons.inventory_2, size: 64, color: Colors.white),
             ),
           ),
         );
@@ -140,10 +138,7 @@ class _SplashPageState extends State<SplashPage> {
           opacity: value.clamp(0.0, 1.0),
           child: Transform.translate(
             offset: Offset(0, 24 * (1 - value)),
-            child: const Text(
-              '拾物记',
-              style: AppTextStyles.splashTitle,
-            ),
+            child: const Text('拾物记', style: AppTextStyles.splashTitle),
           ),
         );
       },
@@ -160,10 +155,7 @@ class _SplashPageState extends State<SplashPage> {
           opacity: value.clamp(0.0, 1.0),
           child: Transform.translate(
             offset: Offset(0, 14 * (1 - value)),
-            child: const Text(
-              '记录每个物品的故事',
-              style: AppTextStyles.splashSubtitle,
-            ),
+            child: const Text('记录每个物品的故事', style: AppTextStyles.splashSubtitle),
           ),
         );
       },
@@ -187,10 +179,7 @@ class _SplashPageState extends State<SplashPage> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(3),
                 gradient: const LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.warning,
-                  ],
+                  colors: [AppColors.primary, AppColors.warning],
                 ),
               ),
             ),
@@ -219,10 +208,7 @@ class _SplashPageState extends State<SplashPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(5),
                   gradient: const LinearGradient(
-                    colors: [
-                      AppColors.primary,
-                      AppColors.warning,
-                    ],
+                    colors: [AppColors.primary, AppColors.warning],
                   ),
                 ),
               ),
@@ -236,8 +222,6 @@ class _SplashPageState extends State<SplashPage> {
               style: AppTextStyles.labelLarge,
             ),
           ),
-         
-          
         ],
       ),
     );

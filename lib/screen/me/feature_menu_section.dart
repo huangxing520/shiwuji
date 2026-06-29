@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 
 /// 功能入口列表
-class FeatureMenuSection extends StatelessWidget {
+class FeatureMenuSection extends ConsumerWidget {
   final VoidCallback onHelpTap;
 
   const FeatureMenuSection({super.key, required this.onHelpTap});
@@ -38,10 +39,17 @@ class FeatureMenuSection extends StatelessWidget {
       color: AppColors.info,
       comingSoon: true,
     ),
+    _MenuEntry(
+      icon: Icons.update_outlined,
+      title: '检查更新',
+      subtitle: '检查是否有新版本可用',
+      color: AppColors.info,
+      route: '/check-update',
+    ),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -63,7 +71,7 @@ class FeatureMenuSection extends StatelessWidget {
               ),
             );
           }),
-          // 帮助反馈
+          // AI 模型设置
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
             duration: const Duration(milliseconds: 400),
@@ -79,19 +87,46 @@ class FeatureMenuSection extends StatelessWidget {
               child: _buildRow(
                 context,
                 const _MenuEntry(
-                  icon: Icons.help_outline,
-                  title: '帮助反馈',
-                  subtitle: '使用帮助与意见反馈',
-                  color: AppColors.success,
+                  icon: Icons.smart_toy_outlined,
+                  title: 'AI 模型设置',
+                  subtitle: '选择供应商、配置 API Key',
+                  color: AppColors.info,
+                  route: '/ai-settings',
                 ),
-                onTap: onHelpTap,
               ),
             ),
           ),
+          // 帮助反馈
+          // TweenAnimationBuilder<double>(
+          //   tween: Tween(begin: 0, end: 1),
+          //   duration: const Duration(milliseconds: 400),
+          //   curve: const Cubic(0.34, 1.56, 0.64, 1),
+          //   builder: (context, t, child) {
+          //     return Transform.translate(
+          //       offset: Offset(0, 20 * (1 - t)),
+          //       child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
+          //     );
+          //   },
+          //   child: Padding(
+          //     padding: const EdgeInsets.only(top: 10),
+          //     child: _buildRow(
+          //       context,
+          //       const _MenuEntry(
+          //         icon: Icons.help_outline,
+          //         title: '帮助反馈',
+          //         subtitle: '使用帮助与意见反馈',
+          //         color: AppColors.success,
+          //       ),
+          //       onTap: onHelpTap,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
   }
+
+  /// AI 模型配置已迁移到 `/ai-settings` 页面，此 section 仅负责入口展示
 
   Widget _buildRow(
     BuildContext context,

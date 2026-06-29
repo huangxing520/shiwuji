@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -40,34 +41,67 @@ class PhotoService {
 
   /// 从相册多选照片，返回拷贝后的本地路径条目。
   /// [remaining] 为当前还能添加几张（上限 - 已有数）。
+  /// 注意：当 remaining=1 时使用 pickImage（单选），因为 pickMultiImage 要求 limit>=2。
   Future<PickResult> pickFromGallery({required int remaining}) async {
     if (remaining <= 0) {
       return const PickResult(error: '最多添加 $maxPhotos 张照片');
     }
 
+    if (remaining == 1) {
+      // pickMultiImage 要求 limit>=2，单选时使用 pickImage
+      debugPrint('[PhotoService] 单张选图，使用 pickImage');
+      final x = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (x == null) return const PickResult();
+
+      final validated = await _validate(x);
+      if (validated != null) {
+        debugPrint('[PhotoService] 校验失败: $validated');
+        return PickResult(error: validated);
+      }
+      final savedPath = await _copyToDocs(x.path);
+      if (savedPath == null) {
+        debugPrint('[PhotoService] 保存失败: ${x.path}');
+        return const PickResult(error: '图片保存失败，请重试');
+      }
+      debugPrint('[PhotoService] 保存成功: $savedPath');
+      return PickResult(
+        entries: [PhotoEntry(path: savedPath, status: PhotoStatus.success)],
+      );
+    }
+
+    debugPrint('[PhotoService] 调用 pickMultiImage, limit=$remaining');
     final picked = await _picker.pickMultiImage(
       imageQuality: 85,
       limit: remaining,
     );
+    debugPrint('[PhotoService] pickMultiImage 返回 ${picked.length} 张图片');
     if (picked.isEmpty) return const PickResult();
 
     final entries = <PhotoEntry>[];
     String? error;
 
     for (final x in picked) {
+      debugPrint('[PhotoService] 校验图片: ${x.path}');
       final validated = await _validate(x);
       if (validated != null) {
+        debugPrint('[PhotoService] 校验失败: $validated');
         error = validated;
         continue;
       }
       final savedPath = await _copyToDocs(x.path);
       if (savedPath == null) {
+        debugPrint('[PhotoService] 保存失败: ${x.path}');
         error = '部分图片保存失败，请重试';
         continue;
       }
+      debugPrint('[PhotoService] 保存成功: $savedPath');
       entries.add(PhotoEntry(path: savedPath, status: PhotoStatus.success));
     }
 
+    debugPrint('[PhotoService] 选图完成: ${entries.length} 张成功, error=$error');
     return PickResult(entries: entries, error: error);
   }
 

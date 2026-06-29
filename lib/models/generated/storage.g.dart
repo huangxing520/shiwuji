@@ -34,6 +34,7 @@ _Cabinet _$CabinetFromJson(Map<String, dynamic> json) => _Cabinet(
   items: (json['items'] as num).toInt(),
   occupation: (json['occupation'] as num).toInt(),
   hasPhoto: json['hasPhoto'] as bool,
+  expectedItems: (json['expectedItems'] as num).toInt(),
 );
 
 Map<String, dynamic> _$CabinetToJson(_Cabinet instance) => <String, dynamic>{
@@ -44,6 +45,7 @@ Map<String, dynamic> _$CabinetToJson(_Cabinet instance) => <String, dynamic>{
   'items': instance.items,
   'occupation': instance.occupation,
   'hasPhoto': instance.hasPhoto,
+  'expectedItems': instance.expectedItems,
 };
 
 _Slot _$SlotFromJson(Map<String, dynamic> json) => _Slot(
@@ -53,6 +55,7 @@ _Slot _$SlotFromJson(Map<String, dynamic> json) => _Slot(
   color: const ColorConverter().fromJson((json['color'] as num).toInt()),
   items: (json['items'] as num).toInt(),
   occupation: (json['occupation'] as num).toInt(),
+  expectedItems: (json['expectedItems'] as num).toInt(),
 );
 
 Map<String, dynamic> _$SlotToJson(_Slot instance) => <String, dynamic>{
@@ -62,6 +65,7 @@ Map<String, dynamic> _$SlotToJson(_Slot instance) => <String, dynamic>{
   'color': const ColorConverter().toJson(instance.color),
   'items': instance.items,
   'occupation': instance.occupation,
+  'expectedItems': instance.expectedItems,
 };
 
 _SpaceItem _$SpaceItemFromJson(Map<String, dynamic> json) => _SpaceItem(

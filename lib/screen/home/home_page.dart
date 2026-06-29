@@ -294,6 +294,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       totalValue: ref.watch(totalValueProvider),
       pendingCount: ref.watch(pendingCountProvider),
       idleCount: ref.watch(idleCountProvider),
+      weeklyNewCount: ref.watch(weeklyNewCountProvider),
+      monthlyGrowth: ref.watch(monthlyGrowthProvider),
     );
   }
 
