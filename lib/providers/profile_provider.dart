@@ -7,6 +7,9 @@ import '../services/ai/ai_provider_registry.dart';
 import '../services/ai/ai_provider_type.dart';
 import '../services/encryption_service.dart';
 import 'database_provider.dart';
+import 'item_providers.dart';
+import 'storage_providers.dart';
+import 'category_provider.dart';
 
 part 'generated/profile_provider.g.dart';
 
@@ -50,20 +53,21 @@ class ProfileManager extends _$ProfileManager {
 }
 
 /// 个人中心数据统计
+///
+/// 通过监听 itemsProvider / roomsProvider / categoryManagerProvider，
+/// 使「数据概览」随数据库变化实时刷新，避免展示过期或空数据。
+/// 物品数量与总价值直接复用 [itemCountProvider] / [totalValueProvider]
+/// （派生自内存中的 itemsProvider，免去额外 SQL，并与首页口径一致）。
 @riverpod
 Future<Map<String, dynamic>> profileStats(Ref ref) async {
-  final itemDao = ref.watch(itemDaoProvider);
-  final roomDao = ref.watch(roomDaoProvider);
-  final categoryDao = ref.watch(categoryDaoProvider);
-
-  final itemCount = await itemDao.countAll();
-  final totalValue = await itemDao.totalValue();
-  final rooms = await roomDao.getAllRooms();
-  final categories = await categoryDao.getAllCategories();
+  final itemCount = ref.watch(itemCountProvider);
+  final totalValue = ref.watch(totalValueProvider);
+  final rooms = await ref.watch(roomsProvider.future);
+  final categories = await ref.watch(categoryManagerProvider.future);
 
   return {
     'itemCount': itemCount,
-    'totalValue': totalValue,
+    'totalValue': totalValue.toDouble(),
     'roomCount': rooms.length,
     'categoryCount': categories.length,
   };

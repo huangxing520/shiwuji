@@ -56,6 +56,9 @@ enum AiProviderType {
 
   /// NVIDIA（OpenAI 兼容，通过 integrate.api.nvidia.com 调用多模型）
   nvidia,
+
+  /// Agnes AI（Sapiens AI，OpenAI 兼容，全模态免费）
+  agnes,
 }
 
 /// 供应商元数据：用于设置页展示
@@ -214,5 +217,12 @@ const Map<AiProviderType, AiProviderMeta> aiProviderMetas = {
     defaultModel: 'minimaxai/minimax-m3',
     apiKeyHint: 'nvapi-...',
     apiKeyHelpUrl: 'https://build.nvidia.com/explore/discover',
+  ),
+  AiProviderType.agnes: AiProviderMeta(
+    displayName: 'Agnes AI',
+    description: 'Sapiens AI 全模态模型，无限期免费，OpenAI 兼容',
+    defaultModel: 'Agnes-2.0-Flash',
+    apiKeyHint: 'sk-...',
+    apiKeyHelpUrl: 'https://platform.agnes-ai.com',
   ),
 };

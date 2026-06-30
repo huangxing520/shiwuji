@@ -90,7 +90,19 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(365),
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _shelfLifeDaysMeta = const VerificationMeta(
+    'shelfLifeDays',
+  );
+  @override
+  late final GeneratedColumn<int> shelfLifeDays = GeneratedColumn<int>(
+    'shelf_life_days',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
@@ -188,6 +200,71 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     requiredDuringInsert: false,
     defaultValue: const Constant('{}'),
   );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('线下购买'),
+  );
+  static const VerificationMeta _warrantyReminderOnMeta =
+      const VerificationMeta('warrantyReminderOn');
+  @override
+  late final GeneratedColumn<bool> warrantyReminderOn = GeneratedColumn<bool>(
+    'warranty_reminder_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("warranty_reminder_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _shelfLifeReminderOnMeta =
+      const VerificationMeta('shelfLifeReminderOn');
+  @override
+  late final GeneratedColumn<bool> shelfLifeReminderOn = GeneratedColumn<bool>(
+    'shelf_life_reminder_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("shelf_life_reminder_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _maintenanceReminderOnMeta =
+      const VerificationMeta('maintenanceReminderOn');
+  @override
+  late final GeneratedColumn<bool> maintenanceReminderOn =
+      GeneratedColumn<bool>(
+        'maintenance_reminder_on',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("maintenance_reminder_on" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _maintenanceCycleMeta = const VerificationMeta(
+    'maintenanceCycle',
+  );
+  @override
+  late final GeneratedColumn<String> maintenanceCycle = GeneratedColumn<String>(
+    'maintenance_cycle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -198,6 +275,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     location,
     purchaseDate,
     warrantyDays,
+    shelfLifeDays,
     status,
     categoryKey,
     cabinetId,
@@ -207,6 +285,11 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     note,
     templateKey,
     templateData,
+    source,
+    warrantyReminderOn,
+    shelfLifeReminderOn,
+    maintenanceReminderOn,
+    maintenanceCycle,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -279,6 +362,15 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         ),
       );
     }
+    if (data.containsKey('shelf_life_days')) {
+      context.handle(
+        _shelfLifeDaysMeta,
+        shelfLifeDays.isAcceptableOrUnknown(
+          data['shelf_life_days']!,
+          _shelfLifeDaysMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -342,6 +434,48 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         ),
       );
     }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    }
+    if (data.containsKey('warranty_reminder_on')) {
+      context.handle(
+        _warrantyReminderOnMeta,
+        warrantyReminderOn.isAcceptableOrUnknown(
+          data['warranty_reminder_on']!,
+          _warrantyReminderOnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shelf_life_reminder_on')) {
+      context.handle(
+        _shelfLifeReminderOnMeta,
+        shelfLifeReminderOn.isAcceptableOrUnknown(
+          data['shelf_life_reminder_on']!,
+          _shelfLifeReminderOnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('maintenance_reminder_on')) {
+      context.handle(
+        _maintenanceReminderOnMeta,
+        maintenanceReminderOn.isAcceptableOrUnknown(
+          data['maintenance_reminder_on']!,
+          _maintenanceReminderOnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('maintenance_cycle')) {
+      context.handle(
+        _maintenanceCycleMeta,
+        maintenanceCycle.isAcceptableOrUnknown(
+          data['maintenance_cycle']!,
+          _maintenanceCycleMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -383,6 +517,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.int,
         data['${effectivePrefix}warranty_days'],
       )!,
+      shelfLifeDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shelf_life_days'],
+      )!,
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -419,6 +557,26 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.string,
         data['${effectivePrefix}template_data'],
       )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      warrantyReminderOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}warranty_reminder_on'],
+      )!,
+      shelfLifeReminderOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}shelf_life_reminder_on'],
+      )!,
+      maintenanceReminderOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}maintenance_reminder_on'],
+      )!,
+      maintenanceCycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}maintenance_cycle'],
+      )!,
     );
   }
 
@@ -437,6 +595,7 @@ class Item extends DataClass implements Insertable<Item> {
   final String location;
   final DateTime purchaseDate;
   final int warrantyDays;
+  final int shelfLifeDays;
   final String status;
   final String categoryKey;
   final String? cabinetId;
@@ -446,6 +605,11 @@ class Item extends DataClass implements Insertable<Item> {
   final String note;
   final String templateKey;
   final String templateData;
+  final String source;
+  final bool warrantyReminderOn;
+  final bool shelfLifeReminderOn;
+  final bool maintenanceReminderOn;
+  final String maintenanceCycle;
   const Item({
     required this.id,
     required this.name,
@@ -455,6 +619,7 @@ class Item extends DataClass implements Insertable<Item> {
     required this.location,
     required this.purchaseDate,
     required this.warrantyDays,
+    required this.shelfLifeDays,
     required this.status,
     required this.categoryKey,
     this.cabinetId,
@@ -464,6 +629,11 @@ class Item extends DataClass implements Insertable<Item> {
     required this.note,
     required this.templateKey,
     required this.templateData,
+    required this.source,
+    required this.warrantyReminderOn,
+    required this.shelfLifeReminderOn,
+    required this.maintenanceReminderOn,
+    required this.maintenanceCycle,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -476,6 +646,7 @@ class Item extends DataClass implements Insertable<Item> {
     map['location'] = Variable<String>(location);
     map['purchase_date'] = Variable<DateTime>(purchaseDate);
     map['warranty_days'] = Variable<int>(warrantyDays);
+    map['shelf_life_days'] = Variable<int>(shelfLifeDays);
     map['status'] = Variable<String>(status);
     map['category_key'] = Variable<String>(categoryKey);
     if (!nullToAbsent || cabinetId != null) {
@@ -489,6 +660,11 @@ class Item extends DataClass implements Insertable<Item> {
     map['note'] = Variable<String>(note);
     map['template_key'] = Variable<String>(templateKey);
     map['template_data'] = Variable<String>(templateData);
+    map['source'] = Variable<String>(source);
+    map['warranty_reminder_on'] = Variable<bool>(warrantyReminderOn);
+    map['shelf_life_reminder_on'] = Variable<bool>(shelfLifeReminderOn);
+    map['maintenance_reminder_on'] = Variable<bool>(maintenanceReminderOn);
+    map['maintenance_cycle'] = Variable<String>(maintenanceCycle);
     return map;
   }
 
@@ -502,6 +678,7 @@ class Item extends DataClass implements Insertable<Item> {
       location: Value(location),
       purchaseDate: Value(purchaseDate),
       warrantyDays: Value(warrantyDays),
+      shelfLifeDays: Value(shelfLifeDays),
       status: Value(status),
       categoryKey: Value(categoryKey),
       cabinetId: cabinetId == null && nullToAbsent
@@ -515,6 +692,11 @@ class Item extends DataClass implements Insertable<Item> {
       note: Value(note),
       templateKey: Value(templateKey),
       templateData: Value(templateData),
+      source: Value(source),
+      warrantyReminderOn: Value(warrantyReminderOn),
+      shelfLifeReminderOn: Value(shelfLifeReminderOn),
+      maintenanceReminderOn: Value(maintenanceReminderOn),
+      maintenanceCycle: Value(maintenanceCycle),
     );
   }
 
@@ -532,6 +714,7 @@ class Item extends DataClass implements Insertable<Item> {
       location: serializer.fromJson<String>(json['location']),
       purchaseDate: serializer.fromJson<DateTime>(json['purchaseDate']),
       warrantyDays: serializer.fromJson<int>(json['warrantyDays']),
+      shelfLifeDays: serializer.fromJson<int>(json['shelfLifeDays']),
       status: serializer.fromJson<String>(json['status']),
       categoryKey: serializer.fromJson<String>(json['categoryKey']),
       cabinetId: serializer.fromJson<String?>(json['cabinetId']),
@@ -541,6 +724,15 @@ class Item extends DataClass implements Insertable<Item> {
       note: serializer.fromJson<String>(json['note']),
       templateKey: serializer.fromJson<String>(json['templateKey']),
       templateData: serializer.fromJson<String>(json['templateData']),
+      source: serializer.fromJson<String>(json['source']),
+      warrantyReminderOn: serializer.fromJson<bool>(json['warrantyReminderOn']),
+      shelfLifeReminderOn: serializer.fromJson<bool>(
+        json['shelfLifeReminderOn'],
+      ),
+      maintenanceReminderOn: serializer.fromJson<bool>(
+        json['maintenanceReminderOn'],
+      ),
+      maintenanceCycle: serializer.fromJson<String>(json['maintenanceCycle']),
     );
   }
   @override
@@ -555,6 +747,7 @@ class Item extends DataClass implements Insertable<Item> {
       'location': serializer.toJson<String>(location),
       'purchaseDate': serializer.toJson<DateTime>(purchaseDate),
       'warrantyDays': serializer.toJson<int>(warrantyDays),
+      'shelfLifeDays': serializer.toJson<int>(shelfLifeDays),
       'status': serializer.toJson<String>(status),
       'categoryKey': serializer.toJson<String>(categoryKey),
       'cabinetId': serializer.toJson<String?>(cabinetId),
@@ -564,6 +757,11 @@ class Item extends DataClass implements Insertable<Item> {
       'note': serializer.toJson<String>(note),
       'templateKey': serializer.toJson<String>(templateKey),
       'templateData': serializer.toJson<String>(templateData),
+      'source': serializer.toJson<String>(source),
+      'warrantyReminderOn': serializer.toJson<bool>(warrantyReminderOn),
+      'shelfLifeReminderOn': serializer.toJson<bool>(shelfLifeReminderOn),
+      'maintenanceReminderOn': serializer.toJson<bool>(maintenanceReminderOn),
+      'maintenanceCycle': serializer.toJson<String>(maintenanceCycle),
     };
   }
 
@@ -576,6 +774,7 @@ class Item extends DataClass implements Insertable<Item> {
     String? location,
     DateTime? purchaseDate,
     int? warrantyDays,
+    int? shelfLifeDays,
     String? status,
     String? categoryKey,
     Value<String?> cabinetId = const Value.absent(),
@@ -585,6 +784,11 @@ class Item extends DataClass implements Insertable<Item> {
     String? note,
     String? templateKey,
     String? templateData,
+    String? source,
+    bool? warrantyReminderOn,
+    bool? shelfLifeReminderOn,
+    bool? maintenanceReminderOn,
+    String? maintenanceCycle,
   }) => Item(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -594,6 +798,7 @@ class Item extends DataClass implements Insertable<Item> {
     location: location ?? this.location,
     purchaseDate: purchaseDate ?? this.purchaseDate,
     warrantyDays: warrantyDays ?? this.warrantyDays,
+    shelfLifeDays: shelfLifeDays ?? this.shelfLifeDays,
     status: status ?? this.status,
     categoryKey: categoryKey ?? this.categoryKey,
     cabinetId: cabinetId.present ? cabinetId.value : this.cabinetId,
@@ -603,6 +808,11 @@ class Item extends DataClass implements Insertable<Item> {
     note: note ?? this.note,
     templateKey: templateKey ?? this.templateKey,
     templateData: templateData ?? this.templateData,
+    source: source ?? this.source,
+    warrantyReminderOn: warrantyReminderOn ?? this.warrantyReminderOn,
+    shelfLifeReminderOn: shelfLifeReminderOn ?? this.shelfLifeReminderOn,
+    maintenanceReminderOn: maintenanceReminderOn ?? this.maintenanceReminderOn,
+    maintenanceCycle: maintenanceCycle ?? this.maintenanceCycle,
   );
   Item copyWithCompanion(ItemsCompanion data) {
     return Item(
@@ -618,6 +828,9 @@ class Item extends DataClass implements Insertable<Item> {
       warrantyDays: data.warrantyDays.present
           ? data.warrantyDays.value
           : this.warrantyDays,
+      shelfLifeDays: data.shelfLifeDays.present
+          ? data.shelfLifeDays.value
+          : this.shelfLifeDays,
       status: data.status.present ? data.status.value : this.status,
       categoryKey: data.categoryKey.present
           ? data.categoryKey.value
@@ -633,6 +846,19 @@ class Item extends DataClass implements Insertable<Item> {
       templateData: data.templateData.present
           ? data.templateData.value
           : this.templateData,
+      source: data.source.present ? data.source.value : this.source,
+      warrantyReminderOn: data.warrantyReminderOn.present
+          ? data.warrantyReminderOn.value
+          : this.warrantyReminderOn,
+      shelfLifeReminderOn: data.shelfLifeReminderOn.present
+          ? data.shelfLifeReminderOn.value
+          : this.shelfLifeReminderOn,
+      maintenanceReminderOn: data.maintenanceReminderOn.present
+          ? data.maintenanceReminderOn.value
+          : this.maintenanceReminderOn,
+      maintenanceCycle: data.maintenanceCycle.present
+          ? data.maintenanceCycle.value
+          : this.maintenanceCycle,
     );
   }
 
@@ -647,6 +873,7 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('location: $location, ')
           ..write('purchaseDate: $purchaseDate, ')
           ..write('warrantyDays: $warrantyDays, ')
+          ..write('shelfLifeDays: $shelfLifeDays, ')
           ..write('status: $status, ')
           ..write('categoryKey: $categoryKey, ')
           ..write('cabinetId: $cabinetId, ')
@@ -655,13 +882,18 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('brand: $brand, ')
           ..write('note: $note, ')
           ..write('templateKey: $templateKey, ')
-          ..write('templateData: $templateData')
+          ..write('templateData: $templateData, ')
+          ..write('source: $source, ')
+          ..write('warrantyReminderOn: $warrantyReminderOn, ')
+          ..write('shelfLifeReminderOn: $shelfLifeReminderOn, ')
+          ..write('maintenanceReminderOn: $maintenanceReminderOn, ')
+          ..write('maintenanceCycle: $maintenanceCycle')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     price,
@@ -670,6 +902,7 @@ class Item extends DataClass implements Insertable<Item> {
     location,
     purchaseDate,
     warrantyDays,
+    shelfLifeDays,
     status,
     categoryKey,
     cabinetId,
@@ -679,7 +912,12 @@ class Item extends DataClass implements Insertable<Item> {
     note,
     templateKey,
     templateData,
-  );
+    source,
+    warrantyReminderOn,
+    shelfLifeReminderOn,
+    maintenanceReminderOn,
+    maintenanceCycle,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -692,6 +930,7 @@ class Item extends DataClass implements Insertable<Item> {
           other.location == this.location &&
           other.purchaseDate == this.purchaseDate &&
           other.warrantyDays == this.warrantyDays &&
+          other.shelfLifeDays == this.shelfLifeDays &&
           other.status == this.status &&
           other.categoryKey == this.categoryKey &&
           other.cabinetId == this.cabinetId &&
@@ -700,7 +939,12 @@ class Item extends DataClass implements Insertable<Item> {
           other.brand == this.brand &&
           other.note == this.note &&
           other.templateKey == this.templateKey &&
-          other.templateData == this.templateData);
+          other.templateData == this.templateData &&
+          other.source == this.source &&
+          other.warrantyReminderOn == this.warrantyReminderOn &&
+          other.shelfLifeReminderOn == this.shelfLifeReminderOn &&
+          other.maintenanceReminderOn == this.maintenanceReminderOn &&
+          other.maintenanceCycle == this.maintenanceCycle);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -712,6 +956,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> location;
   final Value<DateTime> purchaseDate;
   final Value<int> warrantyDays;
+  final Value<int> shelfLifeDays;
   final Value<String> status;
   final Value<String> categoryKey;
   final Value<String?> cabinetId;
@@ -721,6 +966,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> note;
   final Value<String> templateKey;
   final Value<String> templateData;
+  final Value<String> source;
+  final Value<bool> warrantyReminderOn;
+  final Value<bool> shelfLifeReminderOn;
+  final Value<bool> maintenanceReminderOn;
+  final Value<String> maintenanceCycle;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -731,6 +981,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.location = const Value.absent(),
     this.purchaseDate = const Value.absent(),
     this.warrantyDays = const Value.absent(),
+    this.shelfLifeDays = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryKey = const Value.absent(),
     this.cabinetId = const Value.absent(),
@@ -740,6 +991,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.note = const Value.absent(),
     this.templateKey = const Value.absent(),
     this.templateData = const Value.absent(),
+    this.source = const Value.absent(),
+    this.warrantyReminderOn = const Value.absent(),
+    this.shelfLifeReminderOn = const Value.absent(),
+    this.maintenanceReminderOn = const Value.absent(),
+    this.maintenanceCycle = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -751,6 +1007,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.location = const Value.absent(),
     required DateTime purchaseDate,
     this.warrantyDays = const Value.absent(),
+    this.shelfLifeDays = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryKey = const Value.absent(),
     this.cabinetId = const Value.absent(),
@@ -760,6 +1017,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.note = const Value.absent(),
     this.templateKey = const Value.absent(),
     this.templateData = const Value.absent(),
+    this.source = const Value.absent(),
+    this.warrantyReminderOn = const Value.absent(),
+    this.shelfLifeReminderOn = const Value.absent(),
+    this.maintenanceReminderOn = const Value.absent(),
+    this.maintenanceCycle = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -774,6 +1036,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<String>? location,
     Expression<DateTime>? purchaseDate,
     Expression<int>? warrantyDays,
+    Expression<int>? shelfLifeDays,
     Expression<String>? status,
     Expression<String>? categoryKey,
     Expression<String>? cabinetId,
@@ -783,6 +1046,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<String>? note,
     Expression<String>? templateKey,
     Expression<String>? templateData,
+    Expression<String>? source,
+    Expression<bool>? warrantyReminderOn,
+    Expression<bool>? shelfLifeReminderOn,
+    Expression<bool>? maintenanceReminderOn,
+    Expression<String>? maintenanceCycle,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -794,6 +1062,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (location != null) 'location': location,
       if (purchaseDate != null) 'purchase_date': purchaseDate,
       if (warrantyDays != null) 'warranty_days': warrantyDays,
+      if (shelfLifeDays != null) 'shelf_life_days': shelfLifeDays,
       if (status != null) 'status': status,
       if (categoryKey != null) 'category_key': categoryKey,
       if (cabinetId != null) 'cabinet_id': cabinetId,
@@ -803,6 +1072,14 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (note != null) 'note': note,
       if (templateKey != null) 'template_key': templateKey,
       if (templateData != null) 'template_data': templateData,
+      if (source != null) 'source': source,
+      if (warrantyReminderOn != null)
+        'warranty_reminder_on': warrantyReminderOn,
+      if (shelfLifeReminderOn != null)
+        'shelf_life_reminder_on': shelfLifeReminderOn,
+      if (maintenanceReminderOn != null)
+        'maintenance_reminder_on': maintenanceReminderOn,
+      if (maintenanceCycle != null) 'maintenance_cycle': maintenanceCycle,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -816,6 +1093,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<String>? location,
     Value<DateTime>? purchaseDate,
     Value<int>? warrantyDays,
+    Value<int>? shelfLifeDays,
     Value<String>? status,
     Value<String>? categoryKey,
     Value<String?>? cabinetId,
@@ -825,6 +1103,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<String>? note,
     Value<String>? templateKey,
     Value<String>? templateData,
+    Value<String>? source,
+    Value<bool>? warrantyReminderOn,
+    Value<bool>? shelfLifeReminderOn,
+    Value<bool>? maintenanceReminderOn,
+    Value<String>? maintenanceCycle,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -836,6 +1119,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       location: location ?? this.location,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       warrantyDays: warrantyDays ?? this.warrantyDays,
+      shelfLifeDays: shelfLifeDays ?? this.shelfLifeDays,
       status: status ?? this.status,
       categoryKey: categoryKey ?? this.categoryKey,
       cabinetId: cabinetId ?? this.cabinetId,
@@ -845,6 +1129,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       note: note ?? this.note,
       templateKey: templateKey ?? this.templateKey,
       templateData: templateData ?? this.templateData,
+      source: source ?? this.source,
+      warrantyReminderOn: warrantyReminderOn ?? this.warrantyReminderOn,
+      shelfLifeReminderOn: shelfLifeReminderOn ?? this.shelfLifeReminderOn,
+      maintenanceReminderOn:
+          maintenanceReminderOn ?? this.maintenanceReminderOn,
+      maintenanceCycle: maintenanceCycle ?? this.maintenanceCycle,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -876,6 +1166,9 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (warrantyDays.present) {
       map['warranty_days'] = Variable<int>(warrantyDays.value);
     }
+    if (shelfLifeDays.present) {
+      map['shelf_life_days'] = Variable<int>(shelfLifeDays.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -903,6 +1196,23 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (templateData.present) {
       map['template_data'] = Variable<String>(templateData.value);
     }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (warrantyReminderOn.present) {
+      map['warranty_reminder_on'] = Variable<bool>(warrantyReminderOn.value);
+    }
+    if (shelfLifeReminderOn.present) {
+      map['shelf_life_reminder_on'] = Variable<bool>(shelfLifeReminderOn.value);
+    }
+    if (maintenanceReminderOn.present) {
+      map['maintenance_reminder_on'] = Variable<bool>(
+        maintenanceReminderOn.value,
+      );
+    }
+    if (maintenanceCycle.present) {
+      map['maintenance_cycle'] = Variable<String>(maintenanceCycle.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -920,6 +1230,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('location: $location, ')
           ..write('purchaseDate: $purchaseDate, ')
           ..write('warrantyDays: $warrantyDays, ')
+          ..write('shelfLifeDays: $shelfLifeDays, ')
           ..write('status: $status, ')
           ..write('categoryKey: $categoryKey, ')
           ..write('cabinetId: $cabinetId, ')
@@ -929,6 +1240,11 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('note: $note, ')
           ..write('templateKey: $templateKey, ')
           ..write('templateData: $templateData, ')
+          ..write('source: $source, ')
+          ..write('warrantyReminderOn: $warrantyReminderOn, ')
+          ..write('shelfLifeReminderOn: $shelfLifeReminderOn, ')
+          ..write('maintenanceReminderOn: $maintenanceReminderOn, ')
+          ..write('maintenanceCycle: $maintenanceCycle, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3531,6 +3847,7 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<String> location,
       required DateTime purchaseDate,
       Value<int> warrantyDays,
+      Value<int> shelfLifeDays,
       Value<String> status,
       Value<String> categoryKey,
       Value<String?> cabinetId,
@@ -3540,6 +3857,11 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<String> note,
       Value<String> templateKey,
       Value<String> templateData,
+      Value<String> source,
+      Value<bool> warrantyReminderOn,
+      Value<bool> shelfLifeReminderOn,
+      Value<bool> maintenanceReminderOn,
+      Value<String> maintenanceCycle,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3552,6 +3874,7 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<String> location,
       Value<DateTime> purchaseDate,
       Value<int> warrantyDays,
+      Value<int> shelfLifeDays,
       Value<String> status,
       Value<String> categoryKey,
       Value<String?> cabinetId,
@@ -3561,6 +3884,11 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<String> note,
       Value<String> templateKey,
       Value<String> templateData,
+      Value<String> source,
+      Value<bool> warrantyReminderOn,
+      Value<bool> shelfLifeReminderOn,
+      Value<bool> maintenanceReminderOn,
+      Value<String> maintenanceCycle,
       Value<int> rowid,
     });
 
@@ -3612,6 +3940,11 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get shelfLifeDays => $composableBuilder(
+    column: $table.shelfLifeDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnFilters(column),
@@ -3654,6 +3987,31 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
 
   ColumnFilters<String> get templateData => $composableBuilder(
     column: $table.templateData,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get warrantyReminderOn => $composableBuilder(
+    column: $table.warrantyReminderOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get shelfLifeReminderOn => $composableBuilder(
+    column: $table.shelfLifeReminderOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get maintenanceReminderOn => $composableBuilder(
+    column: $table.maintenanceReminderOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get maintenanceCycle => $composableBuilder(
+    column: $table.maintenanceCycle,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3707,6 +4065,11 @@ class $$ItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get shelfLifeDays => $composableBuilder(
+    column: $table.shelfLifeDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -3751,6 +4114,31 @@ class $$ItemsTableOrderingComposer
     column: $table.templateData,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get warrantyReminderOn => $composableBuilder(
+    column: $table.warrantyReminderOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get shelfLifeReminderOn => $composableBuilder(
+    column: $table.shelfLifeReminderOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get maintenanceReminderOn => $composableBuilder(
+    column: $table.maintenanceReminderOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get maintenanceCycle => $composableBuilder(
+    column: $table.maintenanceCycle,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -3790,6 +4178,11 @@ class $$ItemsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get shelfLifeDays => $composableBuilder(
+    column: $table.shelfLifeDays,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
@@ -3820,6 +4213,29 @@ class $$ItemsTableAnnotationComposer
 
   GeneratedColumn<String> get templateData => $composableBuilder(
     column: $table.templateData,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<bool> get warrantyReminderOn => $composableBuilder(
+    column: $table.warrantyReminderOn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get shelfLifeReminderOn => $composableBuilder(
+    column: $table.shelfLifeReminderOn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get maintenanceReminderOn => $composableBuilder(
+    column: $table.maintenanceReminderOn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get maintenanceCycle => $composableBuilder(
+    column: $table.maintenanceCycle,
     builder: (column) => column,
   );
 }
@@ -3860,6 +4276,7 @@ class $$ItemsTableTableManager
                 Value<String> location = const Value.absent(),
                 Value<DateTime> purchaseDate = const Value.absent(),
                 Value<int> warrantyDays = const Value.absent(),
+                Value<int> shelfLifeDays = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> categoryKey = const Value.absent(),
                 Value<String?> cabinetId = const Value.absent(),
@@ -3869,6 +4286,11 @@ class $$ItemsTableTableManager
                 Value<String> note = const Value.absent(),
                 Value<String> templateKey = const Value.absent(),
                 Value<String> templateData = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<bool> warrantyReminderOn = const Value.absent(),
+                Value<bool> shelfLifeReminderOn = const Value.absent(),
+                Value<bool> maintenanceReminderOn = const Value.absent(),
+                Value<String> maintenanceCycle = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -3879,6 +4301,7 @@ class $$ItemsTableTableManager
                 location: location,
                 purchaseDate: purchaseDate,
                 warrantyDays: warrantyDays,
+                shelfLifeDays: shelfLifeDays,
                 status: status,
                 categoryKey: categoryKey,
                 cabinetId: cabinetId,
@@ -3888,6 +4311,11 @@ class $$ItemsTableTableManager
                 note: note,
                 templateKey: templateKey,
                 templateData: templateData,
+                source: source,
+                warrantyReminderOn: warrantyReminderOn,
+                shelfLifeReminderOn: shelfLifeReminderOn,
+                maintenanceReminderOn: maintenanceReminderOn,
+                maintenanceCycle: maintenanceCycle,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3900,6 +4328,7 @@ class $$ItemsTableTableManager
                 Value<String> location = const Value.absent(),
                 required DateTime purchaseDate,
                 Value<int> warrantyDays = const Value.absent(),
+                Value<int> shelfLifeDays = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> categoryKey = const Value.absent(),
                 Value<String?> cabinetId = const Value.absent(),
@@ -3909,6 +4338,11 @@ class $$ItemsTableTableManager
                 Value<String> note = const Value.absent(),
                 Value<String> templateKey = const Value.absent(),
                 Value<String> templateData = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<bool> warrantyReminderOn = const Value.absent(),
+                Value<bool> shelfLifeReminderOn = const Value.absent(),
+                Value<bool> maintenanceReminderOn = const Value.absent(),
+                Value<String> maintenanceCycle = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -3919,6 +4353,7 @@ class $$ItemsTableTableManager
                 location: location,
                 purchaseDate: purchaseDate,
                 warrantyDays: warrantyDays,
+                shelfLifeDays: shelfLifeDays,
                 status: status,
                 categoryKey: categoryKey,
                 cabinetId: cabinetId,
@@ -3928,6 +4363,11 @@ class $$ItemsTableTableManager
                 note: note,
                 templateKey: templateKey,
                 templateData: templateData,
+                source: source,
+                warrantyReminderOn: warrantyReminderOn,
+                shelfLifeReminderOn: shelfLifeReminderOn,
+                maintenanceReminderOn: maintenanceReminderOn,
+                maintenanceCycle: maintenanceCycle,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

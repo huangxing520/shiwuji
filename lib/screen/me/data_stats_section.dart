@@ -43,6 +43,8 @@ class DataStatsSection extends ConsumerWidget {
     final stats = ref.watch(profileStatsProvider);
 
     return stats.when(
+      skipLoadingOnReload: true,
+      skipError: true,
       loading: () => _buildSkeleton(),
       error: (_, __) => _buildSkeleton(),
       data: (data) => Padding(

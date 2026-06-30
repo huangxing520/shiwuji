@@ -22,51 +22,49 @@ class MainShell extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-          BottomNavBar(
-            currentTab: TabType.values[navigationShell.currentIndex],
-            onTabChanged: (tab) {
-              navigationShell.goBranch(
-                tab.index,
-                initialLocation: tab.index == navigationShell.currentIndex,
-              );
-            },
-          ),
-          Positioned(
-            top: -20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  context.push('/add_item');
-                },
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.primary, AppColors.warning],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: AppColors.cardBg, width: 3),
+        BottomNavBar(
+          currentTab: TabType.values[navigationShell.currentIndex],
+          onTabChanged: (tab) {
+            navigationShell.goBranch(
+              tab.index,
+              initialLocation: tab.index == navigationShell.currentIndex,
+            );
+          },
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: GestureDetector(
+              onTap: () {
+                context.push('/add_item');
+              },
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, AppColors.warning],
                   ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 26),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: AppColors.cardBg, width: 3),
                 ),
+                child: const Icon(Icons.add, color: Colors.white, size: 26),
               ),
             ),
           ),
-        ],
-      
+        ),
+      ],
     );
   }
 }
-

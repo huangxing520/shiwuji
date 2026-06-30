@@ -15,6 +15,8 @@ import 'package:shi_wu_ji/models/item.dart';
 import 'package:shi_wu_ji/models/template.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/providers/storage_providers.dart';
+import 'package:shi_wu_ji/services/notification_service.dart';
+import 'package:shi_wu_ji/services/photo_service.dart';
 
 class ItemDetailPage extends ConsumerWidget {
   final String itemId;
@@ -35,10 +37,6 @@ class ItemDetailPage extends ConsumerWidget {
       return Scaffold(body: Center(child: Text('未找到物品')));
     }
 
-    final warrantyDays = item.daysUntilWarrantyExpiry;
-    final warrantyText = item.isWarrantyExpired ? '已过期' : '$warrantyDays';
-    final warrantyDateText = item.isWarrantyExpired ? '天前' : '剩余天数';
-
     return BasePage(
       appBar: CustomAppBar(title: '物品详情'),
       child: Column(
@@ -49,13 +47,13 @@ class ItemDetailPage extends ConsumerWidget {
           const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildItemHeader(item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
-          _buildCountdownSection(item, warrantyText, warrantyDateText),
+          _buildCountdownSection(context, item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildInfoSection(context, ref, item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildTemplateSection(item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
-          _buildBottomEditButton(context, item),
+          _buildBottomActions(context, ref, item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
         ],
       ),
@@ -83,39 +81,123 @@ class ItemDetailPage extends ConsumerWidget {
     return PhotoCarousel(photos: item.photos);
   }
 
-  /// 底部编辑按钮（与顶部图标互补，提供更明显的入口）
-  Widget _buildBottomEditButton(BuildContext context, Item item) {
+  /// 底部操作按钮：编辑物品 + 删除物品（并排平齐）
+  Widget _buildBottomActions(BuildContext context, WidgetRef ref, Item item) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.spacingMedium,
       ),
-      child: GestureDetector(
-        onTap: () => context.push('/edit_item/${item.id}'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: AppColors.cardBg,
-            border: Border.all(color: AppColors.primary, width: 2),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.edit, size: 18, color: AppColors.primaryDark),
-              SizedBox(width: 8),
-              Text(
-                '编辑物品',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+      child: Row(
+        children: [
+          // 编辑物品
+          Expanded(
+            child: GestureDetector(
+              onTap: () => context.push('/edit_item/${item.id}'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.cardBg,
+                  border: Border.all(color: AppColors.primary, width: 2),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit, size: 18, color: AppColors.primaryDark),
+                    SizedBox(width: 8),
+                    Text(
+                      '编辑物品',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          // 删除物品
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _confirmDelete(context, ref, item),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.cardBg,
+                  border: Border.all(color: AppColors.danger, width: 2),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: AppColors.danger,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      '删除物品',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.danger,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  /// 删除确认弹窗：二次确认后清理通知/照片并从数据库删除，最后返回上一页
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Item item,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除物品'),
+        content: Text('确定要删除「${item.name}」吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    // 取消已调度的提醒通知（保修 / 保质期）
+    await NotificationService().cancelWarrantyReminder(item.id);
+    await NotificationService().cancelShelfLifeReminder(item.id);
+
+    // 清理物品照片文件
+    for (final photo in item.photos) {
+      PhotoService.instance.deleteFile(photo);
+    }
+
+    // 从数据库删除
+    await ref.read(itemsProvider.notifier).removeItem(item.id);
+
+    if (context.mounted) {
+      context.pop();
+    }
   }
 
   Widget _buildItemHeader(Item item) {
@@ -142,29 +224,268 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildCountdownSection(
-    Item item,
-    String warrantyText,
-    String warrantyDateText,
-  ) {
-    return Row(
-      children: [
-        CountdownCard(
-          icon: '🛡️',
-          label: '质保',
-          value: warrantyText,
-          date: warrantyDateText,
-          isWarning: item.isWarrantyExpiringSoon || item.isWarrantyExpired,
+  Widget _buildCountdownSection(BuildContext context, Item item) {
+    final cards = <Widget>[];
+
+    // 卡片显示条件以"信息是否设置"为准，与提醒开关解耦：
+    // 仅设置了保修/保质期/保养信息即展示对应卡片，提醒开关仅控制通知推送。
+    if (item.hasWarranty) {
+      cards.add(_buildWarrantyCard(context, item));
+    }
+    if (item.hasShelfLife) {
+      cards.add(_buildShelfLifeCard(context, item));
+    }
+    if (item.hasMaintenance) {
+      cards.add(_buildMaintenanceCard(context, item));
+    }
+
+    // 未设置任何到期信息：不渲染该区块
+    if (cards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // 统一半宽 Wrap：1 卡片靠左、2 卡片并排、3 卡片 2+1 换行
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth =
+            (constraints.maxWidth - AppDimensions.spacingMedium) / 2;
+        return Wrap(
+          spacing: AppDimensions.spacingMedium,
+          runSpacing: AppDimensions.spacingMedium,
+          alignment: WrapAlignment.start,
+          children: cards
+              .map((c) => SizedBox(width: cardWidth, child: c))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildWarrantyCard(BuildContext context, Item item) {
+    final remaining = _daysUntil(item.warrantyEndDate);
+    return CountdownCard(
+      icon: '🛡️',
+      label: '保修',
+      value: _formatValue(remaining),
+      date: _formatDate(remaining),
+      status: _resolveStatus(remaining),
+      onTap: () => _showExpiryDetail(
+        context,
+        title: '保修信息',
+        icon: '🛡️',
+        endDate: item.warrantyEndDate,
+        remainingDays: remaining,
+      ),
+    );
+  }
+
+  Widget _buildShelfLifeCard(BuildContext context, Item item) {
+    final remaining = _daysUntil(item.shelfLifeEndDate);
+    return CountdownCard(
+      icon: '⏳',
+      label: '保质期',
+      value: _formatValue(remaining),
+      date: _formatDate(remaining),
+      status: _resolveStatus(remaining),
+      onTap: () => _showExpiryDetail(
+        context,
+        title: '保质信息',
+        icon: '⏳',
+        endDate: item.shelfLifeEndDate,
+        remainingDays: remaining,
+      ),
+    );
+  }
+
+  Widget _buildMaintenanceCard(BuildContext context, Item item) {
+    final remaining = item.daysUntilNextMaintenance;
+    return CountdownCard(
+      icon: '🔧',
+      label: '维护保养',
+      value: '$remaining',
+      date: remaining == 0 ? '今日需保养' : '剩余天数',
+      status: _resolveMaintenanceStatus(remaining),
+      onTap: () =>
+          _showMaintenanceDetail(context, item: item, remainingDays: remaining),
+    );
+  }
+
+  static CountdownStatus _resolveMaintenanceStatus(int remaining) {
+    // 保养周期循环，不存在"过期"概念：今日保养或 7 天内 → expiringSoon
+    if (remaining == 0) return CountdownStatus.expiringSoon;
+    if (remaining <= 7) return CountdownStatus.expiringSoon;
+    return CountdownStatus.normal;
+  }
+
+  /// 以日期粒度计算剩余天数（UTC 比较，规避 DST / 时分秒导致的偏移）：
+  /// `>0` 剩余天数；`==0` 当天到期；`<0` 已过期，绝对值为过期天数。
+  static int _daysUntil(DateTime end) {
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final endDate = DateTime.utc(end.year, end.month, end.day);
+    return endDate.difference(today).inDays;
+  }
+
+  static CountdownStatus _resolveStatus(int remaining) {
+    if (remaining < 0) return CountdownStatus.expired;
+    if (remaining <= 7) return CountdownStatus.expiringSoon;
+    return CountdownStatus.normal;
+  }
+
+  static String _formatValue(int remaining) =>
+      remaining < 0 ? '${-remaining}' : '$remaining';
+
+  static String _formatDate(int remaining) => remaining < 0 ? '已过期天数' : '剩余天数';
+
+  /// 展示到期详情：到期日 / 今日 / 状态文案
+  void _showExpiryDetail(
+    BuildContext context, {
+    required String title,
+    required String icon,
+    required DateTime endDate,
+    required int remainingDays,
+  }) {
+    final isExpired = remainingDays < 0;
+    final isExpiringSoon = !isExpired && remainingDays <= 7;
+
+    String fmt(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    String statusText;
+    Color statusColor;
+    if (isExpired) {
+      statusText = '已过期 ${-remainingDays} 天';
+      statusColor = AppColors.danger;
+    } else if (isExpiringSoon) {
+      statusText = '即将到期 · 剩余 $remainingDays 天';
+      statusColor = AppColors.warning;
+    } else {
+      statusText = '有效 · 剩余 $remainingDays 天';
+      statusColor = AppColors.success;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            EmojiText(emoji: icon, fontSize: 22),
+            const SizedBox(width: 8),
+            Text(title, style: AppTextStyles.titleMedium),
+          ],
         ),
-        const SizedBox(width: AppDimensions.spacingMedium),
-        CountdownCard(
-          icon: '🔧',
-          label: '维护',
-          value: '30',
-          date: '剩余天数',
-          isWarning: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('到期日期：${fmt(endDate)}', style: AppTextStyles.bodyMedium),
+            const SizedBox(height: AppDimensions.spacingSmall),
+            Text('今日：${fmt(DateTime.now())}', style: AppTextStyles.bodyMedium),
+            const SizedBox(height: AppDimensions.spacingMedium),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(
+                  AppDimensions.borderRadiusSmall,
+                ),
+              ),
+              child: Text(
+                statusText,
+                style: AppTextStyles.colored(
+                  color: statusColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 展示保养详情：周期 / 下次保养日 / 状态文案
+  void _showMaintenanceDetail(
+    BuildContext context, {
+    required Item item,
+    required int remainingDays,
+  }) {
+    final isDueToday = remainingDays == 0;
+    final isDueSoon = !isDueToday && remainingDays <= 7;
+
+    String fmt(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    String statusText;
+    Color statusColor;
+    if (isDueToday) {
+      statusText = '今日需保养';
+      statusColor = AppColors.warning;
+    } else if (isDueSoon) {
+      statusText = '即将保养 · 剩余 $remainingDays 天';
+      statusColor = AppColors.warning;
+    } else {
+      statusText = '有效 · 剩余 $remainingDays 天';
+      statusColor = AppColors.success;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            EmojiText(emoji: '🔧', fontSize: 22),
+            const SizedBox(width: 8),
+            Text('保养信息', style: AppTextStyles.titleMedium),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '保养周期：${item.maintenanceCycle}',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: AppDimensions.spacingSmall),
+            Text(
+              '下次保养：${fmt(item.nextMaintenanceDate)}',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: AppDimensions.spacingMedium),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(
+                  AppDimensions.borderRadiusSmall,
+                ),
+              ),
+              child: Text(
+                statusText,
+                style: AppTextStyles.colored(
+                  color: statusColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -199,6 +520,7 @@ class ItemDetailPage extends ConsumerWidget {
                 value: '¥${item.price.toStringAsFixed(0)}',
                 isAccent: true,
               ),
+              InfoCell(label: '来源', value: item.source),
             ],
           ),
           if (item.note.isNotEmpty) ...[

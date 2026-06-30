@@ -94,6 +94,7 @@ class Items extends _$Items {
     location: row.location,
     purchaseDate: row.purchaseDate,
     warrantyDays: row.warrantyDays,
+    shelfLifeDays: row.shelfLifeDays,
     status: row.status,
     categoryKey: row.categoryKey,
     cabinetId: row.cabinetId,
@@ -103,6 +104,11 @@ class Items extends _$Items {
     note: row.note,
     templateKey: row.templateKey,
     templateData: _decodeMap(row.templateData),
+    source: row.source,
+    warrantyReminderOn: row.warrantyReminderOn,
+    shelfLifeReminderOn: row.shelfLifeReminderOn,
+    maintenanceReminderOn: row.maintenanceReminderOn,
+    maintenanceCycle: row.maintenanceCycle,
   );
 
   /// Item → drift Companion（insert/update 复用）
@@ -116,6 +122,7 @@ class Items extends _$Items {
       location: Value(item.location),
       purchaseDate: Value(item.purchaseDate),
       warrantyDays: Value(item.warrantyDays),
+      shelfLifeDays: Value(item.shelfLifeDays),
       status: Value(item.status),
       categoryKey: Value(item.categoryKey),
       cabinetId: Value(item.cabinetId),
@@ -125,6 +132,11 @@ class Items extends _$Items {
       note: Value(item.note),
       templateKey: Value(item.templateKey),
       templateData: Value(jsonEncode(item.templateData)),
+      source: Value(item.source),
+      warrantyReminderOn: Value(item.warrantyReminderOn),
+      shelfLifeReminderOn: Value(item.shelfLifeReminderOn),
+      maintenanceReminderOn: Value(item.maintenanceReminderOn),
+      maintenanceCycle: Value(item.maintenanceCycle),
     );
   }
 

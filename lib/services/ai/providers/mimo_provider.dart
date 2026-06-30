@@ -13,7 +13,7 @@ class MimoProvider extends OpenAiCompatibleProvider {
   AiProviderType get type => AiProviderType.mimo;
 
   @override
-  String get defaultBaseUrl => 'https://api.siliconflow.cn';
+  String get defaultBaseUrl => 'https://api.xiaomimimo.com';
 
   // 通过聚合平台调用，关闭 response_format 以保证开源模型兼容
   @override

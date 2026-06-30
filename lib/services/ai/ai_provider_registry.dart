@@ -1,5 +1,6 @@
 import 'ai_provider.dart';
 import 'ai_provider_type.dart';
+import 'providers/agnes_provider.dart';
 import 'providers/azure_provider.dart';
 import 'providers/claude_provider.dart';
 import 'providers/deepseek_provider.dart';
@@ -49,6 +50,7 @@ class AiProviderRegistry {
     register(AiProviderType.spark, SparkProvider());
     register(AiProviderType.hunyuan, HunyuanProvider());
     register(AiProviderType.nvidia, NvidiaProvider());
+    register(AiProviderType.agnes, AgnesProvider());
   }
 
   /// 注册新供应商（可用于运行时扩展）

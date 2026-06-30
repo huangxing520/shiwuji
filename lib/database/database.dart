@@ -34,22 +34,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
+      await _seedDefaultData();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      if (from < 2) {
-        await m.addColumn(cabinets, cabinets.photoPath);
-      }
-    },
-    beforeOpen: (details) async {
-      if (details.wasCreated) {
-        await _seedDefaultData();
-      }
+      // 迁移逻辑已清空：执行完全数据清空后，数据库将从零重建至 v1。
+      // 后续若再次升级 schema，请在此处按版本增量编写迁移代码。
     },
   );
 

@@ -86,16 +86,20 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   // 扫一扫预填充：待匹配的 AI 分类标签（数据库分类异步加载完成后再匹配）
   String? _pendingCategoryLabel;
 
-  // 提醒开关
+  // 提醒开关（仅控制通知推送，与信息是否设置解耦）
   bool _expiryOn = false;
   bool _warrantyOn = false;
   bool _maintainOn = false;
+  // 保养周期表单默认值：每半年（与"定期保养周期默认值为半年"一致）。
+  // 编辑模式由 _prefillFromItem 以持久化值覆盖；空串表示未设置。
   String _maintainCycle = '每半年';
 
+  // 保质期天数（0 表示未设置）
+  int _shelfLifeDays = 0;
+  final _shelfLifeController = TextEditingController();
+
   // 日期
-  DateTime? _expiryDate;
   DateTime? _warrantyDate;
-  final _expiryDateController = TextEditingController();
   final _warrantyDateController = TextEditingController();
 
   // 成功弹窗
@@ -115,6 +119,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     final today = DateTime.now();
     _buyDateController.text =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    _shelfLifeController.text = '0';
 
     _templateFieldsAnimController = AnimationController(
       duration: const Duration(milliseconds: 350),
@@ -129,6 +134,8 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _nameController.addListener(_updateEmoji);
     _brandController.addListener(_updateEmoji);
     _noteController.addListener(_updateEmoji);
+    // 保质期天数变化 → 同步 _shelfLifeDays，并联动保质期提醒开关
+    _shelfLifeController.addListener(_onShelfLifeChanged);
 
     // 编辑模式：从数据库预填充；扫一扫：用识别结果预填充；其余新增模式：空白表单
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -147,6 +154,18 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     });
   }
 
+  /// 保质期天数输入变化时同步 `_shelfLifeDays`，并联动保质期提醒开关：
+  /// 天数为 0 时强制关闭提醒开关（与开关禁用态保持一致）。
+  void _onShelfLifeChanged() {
+    final parsed = int.tryParse(_shelfLifeController.text.trim()) ?? 0;
+    final days = parsed < 0 ? 0 : parsed;
+    if (days == _shelfLifeDays) return;
+    setState(() {
+      _shelfLifeDays = days;
+      if (_shelfLifeDays <= 0) _expiryOn = false;
+    });
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -154,7 +173,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _priceController.dispose();
     _noteController.dispose();
     _buyDateController.dispose();
-    _expiryDateController.dispose();
+    _shelfLifeController.dispose();
     _warrantyDateController.dispose();
     _scrollController.dispose();
     for (final c in _tplControllers.values) {
@@ -194,14 +213,27 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       _templateFieldsAnimController.value = 1.0;
     }
 
-    // 还原保修信息
-    if (item.warrantyDays > 0 && item.warrantyDays != 365) {
-      _warrantyOn = true;
+    // 还原保质期信息：天数以持久化字段为准，提醒开关独立回显
+    _shelfLifeDays = item.shelfLifeDays;
+    _shelfLifeController.text = item.shelfLifeDays.toString();
+    _expiryOn = item.shelfLifeReminderOn;
+
+    // 还原保修信息：只要设置过保修期限（warrantyDays > 0）即回显到期日，
+    // 与提醒开关解耦——即便未开启提醒也回显已保存的日期信息。
+    _warrantyOn = item.warrantyReminderOn;
+    if (item.hasWarranty) {
       final warrantyEnd = item.warrantyEndDate;
       _warrantyDate = warrantyEnd;
       _warrantyDateController.text =
           '${warrantyEnd.year}-${warrantyEnd.month.toString().padLeft(2, '0')}-${warrantyEnd.day.toString().padLeft(2, '0')}';
     }
+
+    // 还原保养信息：只要设置过保养周期（非空）即回显，提醒开关独立回显
+    _maintainOn = item.maintenanceReminderOn;
+    _maintainCycle = item.maintenanceCycle;
+
+    // 还原物品来源
+    _selectedSource = item.source;
 
     // 还原照片
     _originalPhotos = List<String>.from(item.photos);
@@ -571,10 +603,10 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   Future<void> _pickDate(
     TextEditingController controller, {
     void Function(DateTime)? onPicked,
+    DateTime? initialDate,
   }) async {
-    final now = DateTime.now();
-    // 尝试解析控制器中已有的日期作为初始值
-    DateTime currentDate = now;
+    // 优先解析控制器中已有的日期；其次使用传入的初始值；最后回退到当前日期
+    DateTime currentDate = initialDate ?? DateTime.now();
     if (controller.text.isNotEmpty) {
       try {
         currentDate = DateTime.parse(controller.text);
@@ -649,9 +681,11 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       } catch (_) {}
     }
 
-    // 计算保修天数
-    int warrantyDays = 365;
-    if (_warrantyOn && _warrantyDateController.text.isNotEmpty) {
+    // 计算保修天数：以日期设置为准（与提醒开关解耦），
+    // 未选择日期 → 0（未设置）；选择日期 → 到期日 - 购买日。
+    // 结束日早于购买日时回退默认 1 年，避免负值。
+    int warrantyDays = 0;
+    if (_warrantyDateController.text.isNotEmpty) {
       try {
         final warrantyEnd = DateTime.parse(_warrantyDateController.text);
         warrantyDays = warrantyEnd.difference(purchaseDate).inDays;
@@ -687,6 +721,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         location: _selectedLocation ?? '未知',
         purchaseDate: purchaseDate,
         warrantyDays: warrantyDays,
+        shelfLifeDays: _shelfLifeDays,
         status: existing.status,
         categoryKey: _selectedCategoryKey ?? '',
         cabinetId: node?.cabinetId,
@@ -696,6 +731,11 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         note: _noteController.text.trim(),
         templateKey: _selectedTemplate,
         templateData: tplDataMap,
+        source: _selectedSource,
+        warrantyReminderOn: _warrantyOn,
+        shelfLifeReminderOn: _expiryOn,
+        maintenanceReminderOn: _maintainOn,
+        maintenanceCycle: _maintainCycle,
       );
 
       await ref.read(itemsProvider.notifier).updateItem(item);
@@ -708,9 +748,17 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         PhotoService.instance.deleteFile(f);
       }
 
-      // 重新调度保修提醒
+      // 重新调度保修提醒（关闭或未设置日期时取消既有提醒）
       if (_warrantyOn && _warrantyDate != null) {
         NotificationService().scheduleWarrantyReminder(item);
+      } else {
+        await NotificationService().cancelWarrantyReminder(item.id);
+      }
+      // 重新调度保质期提醒（关闭或未设置天数时取消既有提醒）
+      if (_expiryOn && _shelfLifeDays > 0) {
+        NotificationService().scheduleShelfLifeReminder(item);
+      } else {
+        await NotificationService().cancelShelfLifeReminder(item.id);
       }
 
       _successTitle = '保存成功！';
@@ -732,6 +780,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         location: _selectedLocation ?? '未知',
         purchaseDate: purchaseDate,
         warrantyDays: warrantyDays,
+        shelfLifeDays: _shelfLifeDays,
         status: 'safe',
         categoryKey: _selectedCategoryKey ?? '',
         cabinetId: node?.cabinetId,
@@ -741,12 +790,20 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
         note: _noteController.text.trim(),
         templateKey: _selectedTemplate,
         templateData: tplDataMap,
+        source: _selectedSource,
+        warrantyReminderOn: _warrantyOn,
+        shelfLifeReminderOn: _expiryOn,
+        maintenanceReminderOn: _maintainOn,
+        maintenanceCycle: _maintainCycle,
       );
 
       await ref.read(itemsProvider.notifier).addItem(item);
 
       if (_warrantyOn && _warrantyDate != null) {
         NotificationService().scheduleWarrantyReminder(item);
+      }
+      if (_expiryOn && _shelfLifeDays > 0) {
+        NotificationService().scheduleShelfLifeReminder(item);
       }
 
       if (andContinue) {
@@ -778,7 +835,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _brandController.clear();
     _priceController.clear();
     _noteController.clear();
-    _expiryDateController.clear();
+    _shelfLifeController.text = '0';
     _warrantyDateController.clear();
     final today = DateTime.now();
     _buyDateController.text =
@@ -796,7 +853,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       _warrantyOn = false;
       _maintainOn = false;
       _maintainCycle = '每半年';
-      _expiryDate = null;
+      _shelfLifeDays = 0;
       _warrantyDate = null;
       _photos.clear();
 
@@ -1408,174 +1465,200 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   }
 
   // ==================== 智能提醒 ====================
+  // 三类信息（保质期天数 / 保修到期日 / 保养周期）与对应提醒开关解耦：
+  // 信息字段始终可见，提醒开关仅在信息已设置时可用，否则禁用并强制关闭。
   Widget _buildReminderSection() {
+    // ── 保质期：天数为 0 表示未设置，开关禁用并强制关闭 ──
+    final bool shelfLifeEnabled = _shelfLifeDays > 0;
+    final String shelfLifeDesc;
+    if (!shelfLifeEnabled) {
+      shelfLifeDesc = '请先填写保质期天数';
+    } else if (_expiryOn) {
+      shelfLifeDesc = '过期前${NotificationService().shelfLifeReminderDays}天推送通知';
+    } else {
+      shelfLifeDesc = '未开启提醒';
+    }
+
+    // ── 保修：到期日为空表示未设置，开关禁用并强制关闭 ──
+    final bool warrantyEnabled = _warrantyDateController.text.isNotEmpty;
+    final String warrantyDesc;
+    if (!warrantyEnabled) {
+      warrantyDesc = '请先选择保修到期日';
+    } else if (_warrantyOn) {
+      warrantyDesc = '保修到期前${NotificationService().warrantyReminderDays}天推送通知';
+    } else {
+      warrantyDesc = '未开启提醒';
+    }
+
+    // ── 保养：周期为空表示未设置，开关禁用并强制关闭 ──
+    final bool maintainEnabled = _maintainCycle.isNotEmpty;
+    final String maintainDesc;
+    if (!maintainEnabled) {
+      maintainDesc = '请先选择保养周期';
+    } else if (_maintainOn) {
+      maintainDesc = '按所选周期推送保养提醒';
+    } else {
+      maintainDesc = '未开启提醒';
+    }
+
     return _FormCard(
       icon: Icons.notifications_outlined,
       title: '智能提醒',
       children: [
-        // 保质期提醒
+        // ─── 保质期天数（信息字段，始终可见）───
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel('保质期天数'),
+                    const SizedBox(height: 6),
+                    _buildInput(
+                      controller: _shelfLifeController,
+                      placeholder: '0',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      suffix: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(
+                          '天',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // 保质期提醒（与天数联动：天数为 0 时禁用并强制关闭）
         _buildReminderRow(
           title: '保质期提醒',
-          desc: '过期前3天/7天推送通知',
+          desc: shelfLifeDesc,
           isOn: _expiryOn,
-          onToggle: () => setState(() => _expiryOn = !_expiryOn),
-        ),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _expiryOn
-              ? Padding(
-                  key: const ValueKey('expiry_date'),
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('过期日期'),
-                            const SizedBox(height: 6),
-                            _buildInput(
-                              controller: _expiryDateController,
-                              placeholder: '选择日期',
-                              readOnly: true,
-                              onTap: () => _pickDate(
-                                _expiryDateController,
-                                onPicked: (d) {
-                                  setState(() {
-                                    _expiryDate = d;
-                                    _expiryDateController.text =
-                                        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-                                  });
-                                },
-                              ),
-                              suffix: Icon(
-                                Icons.expand_more,
-                                size: 14,
-                                color: AppColors.textHint,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('expiry_empty')),
+          enabled: shelfLifeEnabled,
+          onToggle: shelfLifeEnabled
+              ? () => setState(() => _expiryOn = !_expiryOn)
+              : null,
         ),
 
-        // 保修到期提醒
+        // ─── 保修到期日（信息字段，始终可见，与提醒开关解耦）───
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel('保修到期日'),
+                    const SizedBox(height: 6),
+                    _buildInput(
+                      controller: _warrantyDateController,
+                      placeholder: '选择日期',
+                      readOnly: true,
+                      onTap: () {
+                        // 默认保修期限 1 年：以购买日 + 365 天作为日期选择器初始视图
+                        DateTime? initialDate;
+                        if (_buyDateController.text.isNotEmpty) {
+                          try {
+                            final purchaseDate = DateTime.parse(
+                              _buyDateController.text,
+                            );
+                            initialDate = purchaseDate.add(
+                              const Duration(days: 365),
+                            );
+                          } catch (_) {}
+                        }
+                        _pickDate(
+                          _warrantyDateController,
+                          initialDate: initialDate,
+                          onPicked: (d) {
+                            setState(() {
+                              _warrantyDate = d;
+                              _warrantyDateController.text =
+                                  '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                            });
+                          },
+                        );
+                      },
+                      suffix: Icon(
+                        Icons.expand_more,
+                        size: 14,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // 保修到期提醒（与到期日联动：未选择日期时禁用并强制关闭）
         _buildReminderRow(
           title: '保修到期提醒',
-          desc: '保修到期前7天/30天推送通知',
+          desc: warrantyDesc,
           isOn: _warrantyOn,
-          onToggle: () {
-            setState(() {
-              _warrantyOn = !_warrantyOn;
-              if (_warrantyOn && _warrantyDateController.text.isEmpty) {
-                // 默认保修期 1 年（购买日期 + 365 天）
-                DateTime purchaseDate = DateTime.now();
-                if (_buyDateController.text.isNotEmpty) {
-                  try {
-                    purchaseDate = DateTime.parse(_buyDateController.text);
-                  } catch (_) {}
-                }
-                final defaultWarrantyEnd = purchaseDate.add(
-                  const Duration(days: 365),
-                );
-                _warrantyDate = defaultWarrantyEnd;
-                _warrantyDateController.text =
-                    '${defaultWarrantyEnd.year}-${defaultWarrantyEnd.month.toString().padLeft(2, '0')}-${defaultWarrantyEnd.day.toString().padLeft(2, '0')}';
-              }
-            });
-          },
-        ),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _warrantyOn
-              ? Padding(
-                  key: const ValueKey('warranty_date'),
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('保修到期日'),
-                            const SizedBox(height: 6),
-                            _buildInput(
-                              controller: _warrantyDateController,
-                              placeholder: '选择日期',
-                              readOnly: true,
-                              onTap: () => _pickDate(
-                                _warrantyDateController,
-                                onPicked: (d) {
-                                  setState(() {
-                                    _warrantyDate = d;
-                                    _warrantyDateController.text =
-                                        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-                                  });
-                                },
-                              ),
-                              suffix: Icon(
-                                Icons.expand_more,
-                                size: 14,
-                                color: AppColors.textHint,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('warranty_empty')),
+          enabled: warrantyEnabled,
+          onToggle: warrantyEnabled
+              ? () => setState(() => _warrantyOn = !_warrantyOn)
+              : null,
         ),
 
-        // 定期保养提醒
+        // ─── 保养周期（信息字段，始终可见，与提醒开关解耦）───
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel('保养周期'),
+                    const SizedBox(height: 6),
+                    _buildDropdown(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // 定期保养提醒（与周期联动：未选择周期时禁用并强制关闭）
         _buildReminderRow(
           title: '定期保养提醒',
-          desc: '按周期推送保养维护提醒',
+          desc: maintainDesc,
           isOn: _maintainOn,
-          onToggle: () => setState(() => _maintainOn = !_maintainOn),
-        ),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _maintainOn
-              ? Padding(
-                  key: const ValueKey('maintain_cycle'),
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('保养周期'),
-                            const SizedBox(height: 6),
-                            _buildDropdown(),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('maintain_empty')),
+          enabled: maintainEnabled,
+          onToggle: maintainEnabled
+              ? () => setState(() => _maintainOn = !_maintainOn)
+              : null,
         ),
       ],
     );
   }
 
   Widget _buildDropdown() {
+    // 空串视为未选择，传入 null 以展示占位提示；选项变更时空值兜底为空串
     return AppDropdownButton<String>(
-      value: _maintainCycle,
+      value: _maintainCycle.isEmpty ? null : _maintainCycle,
+      hint: Text(
+        '选择保养周期',
+        style: TextStyle(fontSize: 14, color: AppColors.textHint),
+      ),
       items: const [
         DropdownOption('每月', '每月'),
         DropdownOption('每季度', '每季度'),
         DropdownOption('每半年', '每半年'),
         DropdownOption('每年', '每年'),
       ],
-      onChanged: (v) => setState(() => _maintainCycle = v ?? '每半年'),
+      onChanged: (v) => setState(() => _maintainCycle = v ?? ''),
     );
   }
 
@@ -1583,72 +1666,80 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     required String title,
     required String desc,
     required bool isOn,
-    required VoidCallback onToggle,
+    VoidCallback? onToggle,
+    bool enabled = true,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.5,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  desc,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textHint,
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: onToggle,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 48,
-              height: 28,
-              decoration: BoxDecoration(
-                color: isOn ? AppColors.primary : AppColors.border,
-                borderRadius: BorderRadius.circular(14),
+                ],
               ),
-              child: AnimatedAlign(
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: enabled ? onToggle : null,
+              child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+                width: 48,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: (isOn && enabled)
+                      ? AppColors.primary
+                      : AppColors.border,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 300),
+                  alignment: isOn
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1845,7 +1936,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     List<TextInputFormatter>? inputFormatters,
     bool readOnly = false,
     VoidCallback? onTap,
-    double fontSize = 14,
+    double fontSize = 16,
     EdgeInsets? padding,
     Widget? suffix,
   }) {

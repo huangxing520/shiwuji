@@ -104,7 +104,7 @@ class WebDavService {
     );
 
     final data = {
-      'version': 2,
+      'version': db.schemaVersion,
       'timestamp': now.toIso8601String(),
       'itemCount': itemCount,
       'items': items.map((e) => e.toJson()).toList(),
@@ -312,7 +312,8 @@ class WebDavService {
                   emoji: Value(j['emoji'] as String? ?? ''),
                   category: Value(j['category'] as String? ?? '未分类'),
                   location: Value(j['location'] as String? ?? '未知'),
-                  warrantyDays: Value(j['warrantyDays'] as int? ?? 365),
+                  warrantyDays: Value(j['warrantyDays'] as int? ?? 0),
+                  shelfLifeDays: Value(j['shelfLifeDays'] as int? ?? 0),
                   status: Value(j['status'] as String? ?? 'safe'),
                   categoryKey: Value(j['categoryKey'] as String? ?? ''),
                   cabinetId: Value(j['cabinetId'] as String?),
@@ -322,6 +323,19 @@ class WebDavService {
                   note: Value(j['note'] as String? ?? ''),
                   templateKey: Value(j['templateKey'] as String? ?? 'none'),
                   templateData: Value(j['templateData'] as String? ?? '{}'),
+                  source: Value(j['source'] as String? ?? '线下购买'),
+                  warrantyReminderOn: Value(
+                    j['warrantyReminderOn'] as bool? ?? false,
+                  ),
+                  shelfLifeReminderOn: Value(
+                    j['shelfLifeReminderOn'] as bool? ?? false,
+                  ),
+                  maintenanceReminderOn: Value(
+                    j['maintenanceReminderOn'] as bool? ?? false,
+                  ),
+                  maintenanceCycle: Value(
+                    j['maintenanceCycle'] as String? ?? '',
+                  ),
                 ),
               );
         }

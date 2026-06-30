@@ -15,7 +15,8 @@ void main() {
       final item = Item.create(name: 'Test', price: 100);
       expect(item.category, '未分类');
       expect(item.location, '未知');
-      expect(item.warrantyDays, 365);
+      expect(item.warrantyDays, 0);
+      expect(item.shelfLifeDays, 0);
       expect(item.emoji, '');
       expect(item.status, 'safe');
       expect(item.categoryKey, '');
@@ -71,18 +72,8 @@ void main() {
     });
 
     test('value equality: different values != equal', () {
-      final a = Item(
-        id: '1',
-        name: 'A',
-        price: 100,
-        purchaseDate: fixedDate,
-      );
-      final b = Item(
-        id: '2',
-        name: 'B',
-        price: 200,
-        purchaseDate: fixedDate,
-      );
+      final a = Item(id: '1', name: 'A', price: 100, purchaseDate: fixedDate);
+      final b = Item(id: '2', name: 'B', price: 200, purchaseDate: fixedDate);
       expect(a, isNot(equals(b)));
     });
 
@@ -167,6 +158,36 @@ void main() {
       expect(item.isWarrantyExpiringSoon, false);
     });
 
+    test('hasWarranty: true when warrantyDays > 0', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: fixedDate,
+        warrantyDays: 365,
+        warrantyReminderOn: true,
+      );
+      expect(item.hasWarranty, true);
+    });
+
+    test('hasWarranty: true when warrantyDays > 0 even if reminder off', () {
+      // 信息与提醒解耦：warrantyDays > 0 即视为有保修，与 warrantyReminderOn 无关
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: fixedDate,
+        warrantyDays: 730,
+        warrantyReminderOn: false,
+      );
+      expect(item.hasWarranty, true);
+    });
+
+    test('hasWarranty defaults to false (reminder off)', () {
+      final item = Item.create(name: 'Test', price: 100);
+      expect(item.hasWarranty, false);
+    });
+
     test('daysUntilWarrantyExpiry: returns a positive integer', () {
       final item = Item(
         id: '1',
@@ -177,6 +198,149 @@ void main() {
       );
       expect(item.daysUntilWarrantyExpiry, greaterThanOrEqualTo(6));
       expect(item.daysUntilWarrantyExpiry, lessThanOrEqualTo(8));
+    });
+
+    test('shelfLifeDays defaults to 0 and hasShelfLife is false', () {
+      final item = Item.create(name: 'Test', price: 100);
+      expect(item.shelfLifeDays, 0);
+      expect(item.hasShelfLife, false);
+    });
+
+    test('hasShelfLife true when shelfLifeDays > 0', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: fixedDate,
+        shelfLifeDays: 180,
+      );
+      expect(item.hasShelfLife, true);
+    });
+
+    test('shelfLifeEndDate = purchaseDate + shelfLifeDays', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: fixedDate,
+        shelfLifeDays: 30,
+      );
+      expect(item.shelfLifeEndDate, DateTime(2024, 7, 15));
+    });
+
+    test('isShelfLifeExpired: past expiry', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: DateTime.now().subtract(const Duration(days: 400)),
+        shelfLifeDays: 30,
+      );
+      expect(item.isShelfLifeExpired, true);
+      expect(item.isShelfLifeExpiringSoon, false);
+    });
+
+    test('isShelfLifeExpiringSoon: 5 days left', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: DateTime.now().subtract(const Duration(days: 25)),
+        shelfLifeDays: 30,
+      );
+      expect(item.isShelfLifeExpiringSoon, true);
+      expect(item.isShelfLifeExpired, false);
+    });
+
+    test('shelfLifeDays 0: expiry getters all false even for old purchase', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: DateTime.now().subtract(const Duration(days: 999)),
+        shelfLifeDays: 0,
+      );
+      expect(item.hasShelfLife, false);
+      expect(item.isShelfLifeExpired, false);
+      expect(item.isShelfLifeExpiringSoon, false);
+    });
+
+    // ─── 定期保养（maintenance）派生属性 ────────────────────
+    test('maintenance defaults: empty cycle, reminder off', () {
+      // 模型默认 maintenanceCycle = ''（未设置），与表单默认 '每半年' 区分
+      final item = Item.create(name: 'Test', price: 100);
+      expect(item.maintenanceCycle, '');
+      expect(item.maintenanceReminderOn, false);
+      expect(item.source, '线下购买');
+    });
+
+    test('daysUntilNextMaintenance: purchase today → full cycle (180)', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: DateTime.now(),
+        maintenanceReminderOn: true,
+        maintenanceCycle: '每半年',
+      );
+      expect(item.daysUntilNextMaintenance, 180);
+    });
+
+    test(
+      'daysUntilNextMaintenance: 10 days elapsed in 30-day cycle → 20 left',
+      () {
+        final item = Item(
+          id: '1',
+          name: 'Test',
+          price: 100,
+          purchaseDate: DateTime.now().subtract(const Duration(days: 10)),
+          maintenanceReminderOn: true,
+          maintenanceCycle: '每月',
+        );
+        expect(item.daysUntilNextMaintenance, 20);
+      },
+    );
+
+    test('daysUntilNextMaintenance: exactly on cycle boundary → 0', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: DateTime.now().subtract(const Duration(days: 90)),
+        maintenanceReminderOn: true,
+        maintenanceCycle: '每季度',
+      );
+      expect(item.daysUntilNextMaintenance, 0);
+      expect(item.isMaintenanceDueSoon, true);
+    });
+
+    test(
+      'daysUntilNextMaintenance: yearly cycle, 100 days elapsed → 265 left',
+      () {
+        final item = Item(
+          id: '1',
+          name: 'Test',
+          price: 100,
+          purchaseDate: DateTime.now().subtract(const Duration(days: 100)),
+          maintenanceReminderOn: true,
+          maintenanceCycle: '每年',
+        );
+        expect(item.daysUntilNextMaintenance, 265);
+      },
+    );
+
+    test('nextMaintenanceDate is in the future for purchase today', () {
+      final now = DateTime.now();
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: now,
+        maintenanceReminderOn: true,
+        maintenanceCycle: '每月',
+      );
+      // 购买当天 → 下次保养日 = 购买日 + 30 天
+      expect(item.nextMaintenanceDate, now.add(const Duration(days: 30)));
     });
   });
 }
