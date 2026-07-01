@@ -5,7 +5,6 @@ import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/constants/app_text_styles.dart';
 import 'package:shi_wu_ji/constants/app_dimensions.dart';
 import 'package:shi_wu_ji/widgets/base_page.dart';
-import 'package:shi_wu_ji/widgets/custom_app_bar.dart';
 import 'package:shi_wu_ji/widgets/card_container.dart';
 import 'package:shi_wu_ji/widgets/countdown_card.dart';
 import 'package:shi_wu_ji/widgets/emoji_text.dart';
@@ -38,10 +37,10 @@ class ItemDetailPage extends ConsumerWidget {
     }
 
     return BasePage(
-      appBar: CustomAppBar(title: '物品详情'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildTopBar(context),
           const SizedBox(height: AppDimensions.spacingLarge),
           _buildImageGallery(item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
@@ -55,6 +54,49 @@ class ItemDetailPage extends ConsumerWidget {
           const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildBottomActions(context, ref, item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
+        ],
+      ),
+    );
+  }
+
+  // ─── 顶部导航（随内容滚动）──────────────────────────
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.textPrimary.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            '物品详情',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );

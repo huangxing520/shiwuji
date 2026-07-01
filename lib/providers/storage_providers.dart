@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../database/database.dart' as db;
 import '../models/storage.dart' as model;
 import 'database_provider.dart';
+import 'item_providers.dart';
 
 part 'generated/storage_providers.g.dart';
 
@@ -12,6 +13,9 @@ part 'generated/storage_providers.g.dart';
 
 @riverpod
 Future<List<model.Room>> rooms(Ref ref) async {
+  // 依赖物品列表：物品增删改移后 itemsProvider 失效，触发本 provider 重建，
+  // 从而实时刷新各房间占用率（占用率 = 房间物品数 / 所有格位预期值总和）。
+  ref.watch(itemsProvider);
   final dao = ref.watch(roomDaoProvider);
   final rows = await dao.getAllRooms();
 
@@ -39,7 +43,9 @@ Future<List<model.Room>> rooms(Ref ref) async {
 }
 
 /// 新增房间
-@riverpod
+/// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
+@Riverpod(keepAlive: true)
 class RoomActions extends _$RoomActions {
   @override
   Future<void> build() async {}
@@ -81,12 +87,47 @@ class RoomActions extends _$RoomActions {
     await dao.deleteRoom(id);
     ref.invalidate(roomsProvider);
   }
+
+  /// 删除前置检查：返回首个含物品的子单元信息，null 表示可删除。
+  /// 遍历 房间 → 柜体 → 格子，定位最深层含物品的子单元以便精确提示。
+  Future<DeletionBlocker?> checkRoomDeletion(String roomId) async {
+    final roomDao = ref.read(roomDaoProvider);
+    final cabinetDao = ref.read(cabinetDaoProvider);
+    final slotDao = ref.read(slotDaoProvider);
+
+    final room = await roomDao.getById(roomId);
+    final roomName = room?.name ?? '';
+    final cabinets = await cabinetDao.getByRoom(roomId);
+    for (final cab in cabinets) {
+      final slots = await slotDao.getByCabinet(cab.id);
+      for (final slot in slots) {
+        final count = await slotDao.itemCount(slot.id);
+        if (count > 0) {
+          return DeletionBlocker(
+            path: '$roomName / ${cab.name} / ${slot.name}',
+            count: count,
+          );
+        }
+      }
+      // 无 slot 含物品，但仍有直接归属该柜体的主物品
+      final cabCount = await cabinetDao.itemCount(cab.id);
+      if (cabCount > 0) {
+        return DeletionBlocker(
+          path: '$roomName / ${cab.name}',
+          count: cabCount,
+        );
+      }
+    }
+    return null;
+  }
 }
 
 // ─── Cabinets ────────────────────────────────────────
 
 @riverpod
 Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
+  // 依赖物品列表：物品变化后实时刷新柜体占用率。
+  ref.watch(itemsProvider);
   final dao = ref.watch(cabinetDaoProvider);
   final slotDao = ref.watch(slotDaoProvider);
   final rows = await dao.getByRoom(roomId);
@@ -116,7 +157,9 @@ Future<List<model.Cabinet>> cabinetsByRoom(Ref ref, String roomId) async {
 }
 
 /// 新增柜子
-@riverpod
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
+@Riverpod(keepAlive: true)
 class CabinetActions extends _$CabinetActions {
   @override
   Future<void> build() async {}
@@ -172,12 +215,36 @@ class CabinetActions extends _$CabinetActions {
     ref.invalidate(cabinetsByRoomProvider(roomId));
     ref.invalidate(roomsProvider);
   }
+
+  /// 删除前置检查：返回首个含物品的子单元信息，null 表示可删除。
+  Future<DeletionBlocker?> checkCabinetDeletion(String cabinetId) async {
+    final cabinetDao = ref.read(cabinetDaoProvider);
+    final slotDao = ref.read(slotDaoProvider);
+
+    final cab = await cabinetDao.getById(cabinetId);
+    final cabName = cab?.name ?? '';
+    final slots = await slotDao.getByCabinet(cabinetId);
+    for (final slot in slots) {
+      final count = await slotDao.itemCount(slot.id);
+      if (count > 0) {
+        return DeletionBlocker(path: '$cabName / ${slot.name}', count: count);
+      }
+    }
+    // 无 slot 含物品，但仍有直接归属该柜体的主物品
+    final cabCount = await cabinetDao.itemCount(cabinetId);
+    if (cabCount > 0) {
+      return DeletionBlocker(path: cabName, count: cabCount);
+    }
+    return null;
+  }
 }
 
 // ─── Slots ───────────────────────────────────────────
 
 @riverpod
 Future<List<model.Slot>> slotsByCabinet(Ref ref, String cabinetId) async {
+  // 依赖物品列表：物品变化后实时刷新格位占用率。
+  ref.watch(itemsProvider);
   final dao = ref.watch(slotDaoProvider);
   final rows = await dao.getByCabinet(cabinetId);
 
@@ -202,7 +269,9 @@ Future<List<model.Slot>> slotsByCabinet(Ref ref, String cabinetId) async {
 }
 
 /// 新增格位
-@riverpod
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
+@Riverpod(keepAlive: true)
 class SlotActions extends _$SlotActions {
   @override
   Future<void> build() async {}
@@ -260,6 +329,28 @@ class SlotActions extends _$SlotActions {
     ref.invalidate(slotsByCabinetProvider(cabinetId));
     ref.invalidate(roomsProvider);
   }
+
+  /// 删除前置检查：返回含物品信息，null 表示可删除。
+  Future<DeletionBlocker?> checkSlotDeletion(String slotId) async {
+    final slotDao = ref.read(slotDaoProvider);
+    final slot = await slotDao.getById(slotId);
+    final slotName = slot?.name ?? '';
+    final count = await slotDao.itemCount(slotId);
+    if (count > 0) {
+      return DeletionBlocker(path: slotName, count: count);
+    }
+    return null;
+  }
+}
+
+// ─── 删除前置检查 ─────────────────────────────────────
+
+/// 删除收纳单元的前置检查结果：非空表示存在阻塞，不可删除。
+class DeletionBlocker {
+  final String path; // 显示路径，如 "卧室 / 床头柜 / 第一层"
+  final int count; // 该阻塞子单元中的物品数
+
+  const DeletionBlocker({required this.path, required this.count});
 }
 
 // ─── Space Items ─────────────────────────────────────
@@ -281,7 +372,9 @@ Future<List<model.SpaceItem>> spaceItemsBySlot(Ref ref, String slotId) async {
 }
 
 /// 格位物品操作
-@riverpod
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
+@Riverpod(keepAlive: true)
 class SpaceItemActions extends _$SpaceItemActions {
   @override
   Future<void> build() async {}
@@ -324,16 +417,13 @@ class SpaceItemActions extends _$SpaceItemActions {
 
 @riverpod
 Future<Map<String, int>> storageStats(Ref ref) async {
-  final roomDao = ref.watch(roomDaoProvider);
-  final rooms = await roomDao.getAllRooms();
+  // 依赖 roomsProvider：房间/柜体/格子的增删改及物品变化都会使 roomsProvider 失效，
+  // 从而触发本 provider 重建，保证顶部统计实时刷新。
+  // roomsProvider 已为每个房间计算了 storageCount 与 items，直接复用避免重复查询 DAO。
+  final rooms = await ref.watch(roomsProvider.future);
   int totalRooms = rooms.length;
-  int totalCabinets = 0;
-  int totalItems = 0;
-
-  for (final room in rooms) {
-    totalCabinets += await roomDao.cabinetCount(room.id);
-    totalItems += await roomDao.itemCount(room.id);
-  }
+  int totalCabinets = rooms.fold(0, (sum, r) => sum + r.storageCount);
+  int totalItems = rooms.fold(0, (sum, r) => sum + r.items);
 
   return {'rooms': totalRooms, 'cabinets': totalCabinets, 'items': totalItems};
 }

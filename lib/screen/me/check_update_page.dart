@@ -225,11 +225,11 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
+                  _buildTopBar(),
                   const SizedBox(height: 24),
                   _buildAppIconSection(),
                   const SizedBox(height: 32),
@@ -253,7 +253,7 @@ class _CheckUpdatePageState extends State<CheckUpdatePage>
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
         children: [
           GestureDetector(

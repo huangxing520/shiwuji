@@ -1,4 +1,4 @@
-package com.wupin.wupin
+package com.shiwuji.shiwuji
 
 import io.flutter.embedding.android.FlutterActivity
 

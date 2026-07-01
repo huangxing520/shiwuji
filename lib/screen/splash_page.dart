@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
@@ -16,13 +17,22 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   double _progress = 0.0;
   bool _isFading = false;
+  bool _disposed = false;
+  Timer? _startTimer;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 600), () {
-      _runProgress();
+    _startTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!_disposed) _runProgress();
     });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _startTimer?.cancel();
+    super.dispose();
   }
 
   void _runProgress() {
@@ -30,6 +40,8 @@ class _SplashPageState extends State<SplashPage> {
     const total = 2000;
 
     void update() {
+      if (_disposed) return;
+
       final now = DateTime.now().millisecondsSinceEpoch;
       final elapsed = now - start;
       final raw = (elapsed / total).clamp(0.0, 1.0);
@@ -44,11 +56,13 @@ class _SplashPageState extends State<SplashPage> {
         Future.delayed(const Duration(milliseconds: 16), update);
       } else {
         Future.delayed(const Duration(milliseconds: 300), () {
+          if (_disposed) return;
           if (mounted) {
             setState(() {
               _isFading = true;
             });
             Future.delayed(const Duration(milliseconds: 500), () {
+              if (_disposed) return;
               if (mounted) {
                 FirstRunService.markCompleted();
                 context.go('/home');

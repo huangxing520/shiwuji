@@ -46,24 +46,30 @@ final class RoomsProvider
   }
 }
 
-String _$roomsHash() => r'eb5d371650a45ec05fc79b4ff07c50f620fe6196';
+String _$roomsHash() => r'fe7a3c9008be357705981214b1d9b7a7af920389';
 
 /// 新增房间
+/// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 @ProviderFor(RoomActions)
 final roomActionsProvider = RoomActionsProvider._();
 
 /// 新增房间
+/// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 final class RoomActionsProvider
     extends $AsyncNotifierProvider<RoomActions, void> {
   /// 新增房间
+  /// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
+  /// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
   RoomActionsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'roomActionsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -76,9 +82,11 @@ final class RoomActionsProvider
   RoomActions create() => RoomActions();
 }
 
-String _$roomActionsHash() => r'bf8197a19fbec64df97d1a7f93082ba8b3f72ae8';
+String _$roomActionsHash() => r'b243b6bd20578e67181ad9d4a33253d5a4ceb89d';
 
 /// 新增房间
+/// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 abstract class _$RoomActions extends $AsyncNotifier<void> {
   FutureOr<void> build();
@@ -155,7 +163,7 @@ final class CabinetsByRoomProvider
   }
 }
 
-String _$cabinetsByRoomHash() => r'00f732ed98ff34fa69db05ad07bf970d2b27c003';
+String _$cabinetsByRoomHash() => r'1e0f10f67d89d5a1518808d79599577ff1c83d1a';
 
 final class CabinetsByRoomFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.Cabinet>>, String> {
@@ -176,21 +184,27 @@ final class CabinetsByRoomFamily extends $Family
 }
 
 /// 新增柜子
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 @ProviderFor(CabinetActions)
 final cabinetActionsProvider = CabinetActionsProvider._();
 
 /// 新增柜子
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 final class CabinetActionsProvider
     extends $AsyncNotifierProvider<CabinetActions, void> {
   /// 新增柜子
+  /// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+  /// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
   CabinetActionsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'cabinetActionsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -203,9 +217,11 @@ final class CabinetActionsProvider
   CabinetActions create() => CabinetActions();
 }
 
-String _$cabinetActionsHash() => r'b7788cfed913e3454520e742210e984002fb9268';
+String _$cabinetActionsHash() => r'483ea18563f4aae94915209c3cedc862470feaa9';
 
 /// 新增柜子
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 abstract class _$CabinetActions extends $AsyncNotifier<void> {
   FutureOr<void> build();
@@ -280,7 +296,7 @@ final class SlotsByCabinetProvider
   }
 }
 
-String _$slotsByCabinetHash() => r'8f6c7a4fbe213fc933d2bd9e3a7601016df14b3d';
+String _$slotsByCabinetHash() => r'86484e8441442748af9a432a7369c94226ed84f1';
 
 final class SlotsByCabinetFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<model.Slot>>, String> {
@@ -301,21 +317,27 @@ final class SlotsByCabinetFamily extends $Family
 }
 
 /// 新增格位
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 @ProviderFor(SlotActions)
 final slotActionsProvider = SlotActionsProvider._();
 
 /// 新增格位
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 final class SlotActionsProvider
     extends $AsyncNotifierProvider<SlotActions, void> {
   /// 新增格位
+  /// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+  /// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
   SlotActionsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'slotActionsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -328,9 +350,11 @@ final class SlotActionsProvider
   SlotActions create() => SlotActions();
 }
 
-String _$slotActionsHash() => r'ac8c556cb4662ddc54196014f5342486ec9eb846';
+String _$slotActionsHash() => r'8b303d55db6c8b7c32fbb6c8da2dfde73d397de6';
 
 /// 新增格位
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 abstract class _$SlotActions extends $AsyncNotifier<void> {
   FutureOr<void> build();
@@ -428,21 +452,27 @@ final class SpaceItemsBySlotFamily extends $Family
 }
 
 /// 格位物品操作
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 @ProviderFor(SpaceItemActions)
 final spaceItemActionsProvider = SpaceItemActionsProvider._();
 
 /// 格位物品操作
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 final class SpaceItemActionsProvider
     extends $AsyncNotifierProvider<SpaceItemActions, void> {
   /// 格位物品操作
+  /// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+  /// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
   SpaceItemActionsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'spaceItemActionsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -455,9 +485,11 @@ final class SpaceItemActionsProvider
   SpaceItemActions create() => SpaceItemActions();
 }
 
-String _$spaceItemActionsHash() => r'2a082e90829125791916a3f02c47a09f98ee7cc3';
+String _$spaceItemActionsHash() => r'49b64ede164b3b6b0679152da7d58a559d107c45';
 
 /// 格位物品操作
+/// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
+/// autoDispose 会在异步操作 await 期间销毁 provider，导致后续 ref.invalidate 抛 UnmountedRefException。
 
 abstract class _$SpaceItemActions extends $AsyncNotifier<void> {
   FutureOr<void> build();

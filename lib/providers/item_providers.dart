@@ -84,6 +84,33 @@ class Items extends _$Items {
     ref.invalidateSelf();
   }
 
+  /// 批量迁移物品到新的收纳位置（供收纳页"批量迁移"使用）。
+  /// 单次 invalidate，避免逐条更新引发多次重建。
+  Future<void> migrateItems(
+    List<String> ids, {
+    String? cabinetId,
+    String? slotId,
+    required String locationLabel,
+  }) async {
+    for (final id in ids) {
+      await _dao.updateLocation(
+        id: id,
+        cabinetId: cabinetId,
+        slotId: slotId,
+        locationLabel: locationLabel,
+      );
+    }
+    ref.invalidateSelf();
+  }
+
+  /// 批量删除物品（供收纳页"批量删除"使用）。
+  Future<void> removeItems(List<String> ids) async {
+    for (final id in ids) {
+      await _dao.deleteItem(id);
+    }
+    ref.invalidateSelf();
+  }
+
   /// 将 drift 行记录转换为 Item 模型（公开方法，供备份恢复等场景使用）
   static Item toModel(db.Item row) => Item(
     id: row.id,

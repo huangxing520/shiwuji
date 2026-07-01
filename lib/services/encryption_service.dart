@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class EncryptionService {
   EncryptionService._();
@@ -10,12 +11,84 @@ class EncryptionService {
   static const int _keyLength = 32;
   static const int _ivLength = 16;
 
-  Uint8List _deriveKey() {
-    const password = 'sWJ92kLpXzMnQbVrT7yH3gDfSaWeRtYuIoP';
-    const salt = 'sh1wUj1_A1_C0nf1g_S4lt';
-    final passwordBytes = utf8.encode(password);
-    final saltBytes = utf8.encode(salt);
-    return _pbkdf2(passwordBytes, saltBytes, 10000, _keyLength);
+  // ─── 安全存储 key ───────────────────────────
+  static const _secureStorage = FlutterSecureStorage();
+  static const _kPasswordKey = 'enc_password_v2';
+  static const _kSaltKey = 'enc_salt_v2';
+
+  /// 旧版硬编码密钥（仅用于解密迁移，不再用于加密新数据）
+  static const _legacyPassword = 'sWJ92kLpXzMnQbVrT7yH3gDfSaWeRtYuIoP';
+  static const _legacySalt = 'sh1wUj1_A1_C0nf1g_S4lt';
+
+  /// 缓存的当前密钥（init 后填充，避免每次加密都读安全存储）
+  Uint8List? _cachedKey;
+
+  /// 缓存的旧版密钥（惰性计算，用于迁移回退）
+  Uint8List? _cachedLegacyKey;
+
+  /// 初始化 —— 在 App 启动时调用一次。
+  ///
+  /// 从安全存储加载密钥；首次安装时生成随机密钥并写入。
+  Future<void> init() async {
+    _cachedKey = await _loadOrGenerateKey();
+  }
+
+  /// 从安全存储加载密钥，不存在则生成随机密钥并存储。
+  Future<Uint8List> _loadOrGenerateKey() async {
+    final storedPassword = await _secureStorage.read(key: _kPasswordKey);
+    final storedSalt = await _secureStorage.read(key: _kSaltKey);
+
+    if (storedPassword != null && storedSalt != null) {
+      return _pbkdf2(
+        utf8.encode(storedPassword),
+        utf8.encode(storedSalt),
+        10000,
+        _keyLength,
+      );
+    }
+
+    // 首次使用：生成随机 password 和 salt
+    final random = Random.secure();
+    final newPassword = _generateRandomBase64(32, random);
+    final newSalt = _generateRandomBase64(16, random);
+
+    await _secureStorage.write(key: _kPasswordKey, value: newPassword);
+    await _secureStorage.write(key: _kSaltKey, value: newSalt);
+
+    return _pbkdf2(
+      utf8.encode(newPassword),
+      utf8.encode(newSalt),
+      10000,
+      _keyLength,
+    );
+  }
+
+  String _generateRandomBase64(int byteLength, Random random) {
+    final bytes = Uint8List.fromList(
+      List<int>.generate(byteLength, (_) => random.nextInt(256)),
+    );
+    return base64.encode(bytes);
+  }
+
+  /// 获取旧版密钥（惰性缓存）
+  Uint8List get _legacyKey {
+    return _cachedLegacyKey ??= _pbkdf2(
+      utf8.encode(_legacyPassword),
+      utf8.encode(_legacySalt),
+      10000,
+      _keyLength,
+    );
+  }
+
+  /// 获取当前密钥（必须已调用 init）
+  Uint8List get _currentKey {
+    final key = _cachedKey;
+    if (key == null) {
+      throw StateError(
+        'EncryptionService 未初始化，请在 App 启动时调用 init()',
+      );
+    }
+    return key;
   }
 
   Uint8List _pbkdf2(
@@ -54,7 +127,7 @@ class EncryptionService {
   String encrypt(String plaintext) {
     if (plaintext.isEmpty) return '';
 
-    final key = _deriveKey();
+    final key = _currentKey;
     final iv = _generateRandomBytes(_ivLength);
     final plainBytes = utf8.encode(plaintext);
 
@@ -66,14 +139,42 @@ class EncryptionService {
     return base64.encode(combined.takeBytes());
   }
 
+  /// 使用当前密钥解密。解密失败时自动回退到旧版硬编码密钥（迁移兼容）。
+  ///
+  /// 返回值:
+  /// - 正常解密：返回明文
+  /// - 旧版密钥解密成功：返回明文（调用方应使用 [needsReEncryption] 检查是否需要重新加密）
+  /// - 都失败：返回空字符串
+  bool _lastDecryptUsedLegacy = false;
+
   String decrypt(String ciphertext) {
     if (ciphertext.isEmpty) return '';
+    _lastDecryptUsedLegacy = false;
 
+    // 先尝试当前密钥
+    final result = _decryptWithKey(_currentKey, ciphertext);
+    if (result != null) return result;
+
+    // 回退到旧版密钥
+    final legacyResult = _decryptWithKey(_legacyKey, ciphertext);
+    if (legacyResult != null) {
+      _lastDecryptUsedLegacy = true;
+      return legacyResult;
+    }
+
+    return '';
+  }
+
+  /// 上次 decrypt 是否使用了旧版密钥回退。
+  ///
+  /// 为 true 时，调用方应重新加密并保存，以完成密钥迁移。
+  bool get needsReEncryption => _lastDecryptUsedLegacy;
+
+  /// 用指定密钥解密，失败返回 null。
+  String? _decryptWithKey(Uint8List key, String ciphertext) {
     try {
-      final key = _deriveKey();
       final combined = base64.decode(ciphertext);
-
-      if (combined.length <= _ivLength) return '';
+      if (combined.length <= _ivLength) return null;
 
       final iv = combined.sublist(0, _ivLength);
       final encrypted = combined.sublist(_ivLength);
@@ -82,7 +183,7 @@ class EncryptionService {
 
       return utf8.decode(unpadded);
     } catch (_) {
-      return '';
+      return null;
     }
   }
 

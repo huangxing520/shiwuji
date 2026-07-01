@@ -41,13 +41,13 @@ class CabinetDao extends DatabaseAccessor<AppDatabase>
     return result.first.read<int>('total');
   }
 
-  /// 统计某个柜子下的物品数量
+  /// 统计某个柜子下的物品数量（主物品 items + space_items）
   Future<int> itemCount(String cabinetId) async {
     final result = await customSelect(
-      'SELECT COUNT(*) AS total FROM space_items '
-      'INNER JOIN slots ON space_items.slot_id = slots.id '
-      'WHERE slots.cabinet_id = ?',
-      variables: [Variable.withString(cabinetId)],
+      'SELECT (SELECT COUNT(*) FROM items WHERE cabinet_id = ?) '
+      '+ (SELECT COUNT(*) FROM space_items WHERE slot_id IN '
+      '(SELECT id FROM slots WHERE cabinet_id = ?)) AS total',
+      variables: [Variable.withString(cabinetId), Variable.withString(cabinetId)],
     ).get();
     return result.first.read<int>('total');
   }

@@ -129,12 +129,12 @@ class _NotificationSettingsPageState
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
             if (_loaded)
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
+                    _buildTopBar(),
                     const SizedBox(height: 12),
                     _buildWarrantyCard(),
                     const SizedBox(height: 16),
@@ -163,7 +163,7 @@ class _NotificationSettingsPageState
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
         children: [
           GestureDetector(

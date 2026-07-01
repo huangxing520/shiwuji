@@ -7,6 +7,7 @@ import 'app_router.dart';
 import 'providers/database_provider.dart';
 import 'services/notification_service.dart';
 import 'services/first_run_service.dart';
+import 'services/encryption_service.dart';
 import 'utils/package_info_setup_web.dart'
     if (dart.library.io) 'utils/package_info_setup_io.dart';
 
@@ -25,6 +26,7 @@ void main() async {
 
   await NotificationService().init();
   await FirstRunService.init();
+  await EncryptionService.instance.init();
   // 预加载首页背景图，避免首次渲染时闪烁
   await rootBundle.load('assets/icon/background1.jpg');
   runApp(ProviderScope(child: MyApp()));

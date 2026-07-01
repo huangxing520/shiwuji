@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.wupin" "\0"
-            VALUE "FileDescription", "wupin" "\0"
+            VALUE "CompanyName", "shiwuji" "\0"
+            VALUE "FileDescription", "拾物记" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "wupin" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.wupin. All rights reserved." "\0"
-            VALUE "OriginalFilename", "wupin.exe" "\0"
-            VALUE "ProductName", "wupin" "\0"
+            VALUE "InternalName", "shi_wu_ji" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 shiwuji. All rights reserved." "\0"
+            VALUE "OriginalFilename", "shi_wu_ji.exe" "\0"
+            VALUE "ProductName", "拾物记" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

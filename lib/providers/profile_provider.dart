@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
 import '../daos/settings_dao.dart';
 import '../services/ai/ai_models.dart';
 import '../services/ai/ai_provider.dart';
@@ -112,11 +113,9 @@ class AiConfigManager extends _$AiConfigManager {
     );
   }
 
-  String _generateId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final random = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
-    return 'm_${timestamp}_$random';
-  }
+  static const _uuid = Uuid();
+
+  String _generateId() => 'm_${_uuid.v4()}';
 
   AiProviderType _parseType(String? s) {
     if (s == null || s.isEmpty) return AiProviderType.gemini;
@@ -151,7 +150,7 @@ class AiConfigManager extends _$AiConfigManager {
       final displayName = _decryptValue(
         await dao.getValue(_modelKey(id, _displayNameSuffix)),
       );
-      return AiProviderConfig(
+      final config = AiProviderConfig(
         id: id,
         type: type,
         apiKey: apiKey,
@@ -160,6 +159,14 @@ class AiConfigManager extends _$AiConfigManager {
         baseUrl: baseUrl.isEmpty ? null : baseUrl,
         displayName: displayName.isEmpty ? null : displayName,
       );
+
+      // 如果任一字段使用了旧版密钥解密，自动用新密钥重新加密保存
+      if (EncryptionService.instance.needsReEncryption) {
+        debugPrint('[AiConfigManager] 检测到旧版加密数据，自动迁移到新密钥: $id');
+        await _saveConfig(dao, config);
+      }
+
+      return config;
     } catch (_) {
       return null;
     }

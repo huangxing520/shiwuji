@@ -16,8 +16,11 @@ class RoomDao extends DatabaseAccessor<AppDatabase> with _$RoomDaoMixin {
 
   Future<int> insertRoom(RoomsCompanion room) => into(rooms).insert(room);
 
-  Future<bool> updateRoom(RoomsCompanion room) =>
-      update(rooms).replace(room);
+  Future<bool> updateRoom(RoomsCompanion room) async {
+    final rows = await (update(rooms)..where((t) => t.id.equals(room.id.value)))
+        .write(room);
+    return rows > 0;
+  }
 
   Future<int> deleteRoom(String id) =>
       (delete(rooms)..where((t) => t.id.equals(id))).go();
@@ -31,14 +34,15 @@ class RoomDao extends DatabaseAccessor<AppDatabase> with _$RoomDaoMixin {
     return result.first.read<int>('total');
   }
 
-  /// 统计某个房间下的物品数量（通过 space_items 聚合）
+  /// 统计某个房间下的物品数量（主物品 items + space_items）
   Future<int> itemCount(String roomId) async {
     final result = await customSelect(
-      'SELECT COUNT(*) AS total FROM space_items '
-      'INNER JOIN slots ON space_items.slot_id = slots.id '
-      'INNER JOIN cabinets ON slots.cabinet_id = cabinets.id '
-      'WHERE cabinets.room_id = ?',
-      variables: [Variable.withString(roomId)],
+      'SELECT (SELECT COUNT(*) FROM items WHERE cabinet_id IN '
+      '(SELECT id FROM cabinets WHERE room_id = ?)) '
+      '+ (SELECT COUNT(*) FROM space_items WHERE slot_id IN '
+      '(SELECT s.id FROM slots s INNER JOIN cabinets c ON s.cabinet_id = c.id '
+      'WHERE c.room_id = ?)) AS total',
+      variables: [Variable.withString(roomId), Variable.withString(roomId)],
     ).get();
     return result.first.read<int>('total');
   }

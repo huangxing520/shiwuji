@@ -120,6 +120,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _buyDateController.text =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     _shelfLifeController.text = '0';
+    // 新增模式：保修到期日默认为 1 年后的今天（编辑模式由 _prefillFromItem 回显真实值）
+    if (!_isEdit) {
+      final warrantyEnd = today.add(const Duration(days: 365));
+      _warrantyDate = warrantyEnd;
+      _warrantyDateController.text =
+          '${warrantyEnd.year}-${warrantyEnd.month.toString().padLeft(2, '0')}-${warrantyEnd.day.toString().padLeft(2, '0')}';
+    }
 
     _templateFieldsAnimController = AnimationController(
       duration: const Duration(milliseconds: 350),
@@ -836,10 +843,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     _priceController.clear();
     _noteController.clear();
     _shelfLifeController.text = '0';
-    _warrantyDateController.clear();
     final today = DateTime.now();
     _buyDateController.text =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    // 保修到期日默认为 1 年后的今天（与新增模式一致）
+    final warrantyEnd = today.add(const Duration(days: 365));
+    _warrantyDateController.text =
+        '${warrantyEnd.year}-${warrantyEnd.month.toString().padLeft(2, '0')}-${warrantyEnd.day.toString().padLeft(2, '0')}';
 
     setState(() {
       _selectedTemplate = 'none';
@@ -854,7 +864,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
       _maintainOn = false;
       _maintainCycle = '每半年';
       _shelfLifeDays = 0;
-      _warrantyDate = null;
+      _warrantyDate = warrantyEnd;
       _photos.clear();
 
       for (final c in _tplControllers.values) {
@@ -879,8 +889,6 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
             children: [
               // 状态栏占位
               SizedBox(height: MediaQuery.of(context).padding.top),
-              // 顶部导航
-              _buildTopBar(),
               // 滚动区域
               Expanded(
                 child: SingleChildScrollView(
@@ -889,6 +897,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildTopBar(),
                       const SizedBox(height: 8),
                       _buildPhotoSection(),
                       const SizedBox(height: 16),
@@ -925,7 +934,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   // ==================== 顶部导航 ====================
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
         children: [
           // 返回按钮

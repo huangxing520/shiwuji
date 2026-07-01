@@ -1,11 +1,11 @@
 {
-    "name": "wupin",
-    "short_name": "wupin",
+    "name": "拾物记",
+    "short_name": "拾物记",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "记录每个物品的故事",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

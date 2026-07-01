@@ -225,10 +225,7 @@ class RecentItemCard extends StatelessWidget {
                       File(photoPath!),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 22),
-                        ),
+                        child: EmojiText(emoji: emoji, fontSize: 22),
                       ),
                     )
                   : Center(child: EmojiText(emoji: emoji, fontSize: 22)),

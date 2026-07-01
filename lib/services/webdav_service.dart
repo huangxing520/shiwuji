@@ -214,6 +214,69 @@ class WebDavService {
     return restoredItemCount;
   }
 
+  // ─── 安全类型转换辅助 ──────────────────────────
+
+  /// 必填 String：null 或类型不匹配时抛出带字段名的异常。
+  static String _reqStr(Map<String, dynamic> j, String field, String table) {
+    final v = j[field];
+    if (v == null) {
+      throw FormatException('恢复失败: $table 缺少必填字段 "$field"');
+    }
+    if (v is String) return v;
+    // 兼容 int/double 被序列化为 string 的场景
+    return v.toString();
+  }
+
+  /// 必填 int：支持 num→int 自动转换。
+  static int _reqInt(Map<String, dynamic> j, String field, String table) {
+    final v = j[field];
+    if (v == null) {
+      throw FormatException('恢复失败: $table 缺少必填字段 "$field"');
+    }
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    final parsed = int.tryParse(v.toString());
+    if (parsed == null) {
+      throw FormatException(
+        '恢复失败: $table.$field 期望 int，实际值 "$v" (${v.runtimeType})',
+      );
+    }
+    return parsed;
+  }
+
+  /// 可选 String：null 时返回 fallback。
+  static String _optStr(Map<String, dynamic> j, String field, String fallback) {
+    final v = j[field];
+    if (v == null) return fallback;
+    return v is String ? v : v.toString();
+  }
+
+  /// 可选 int：null 时返回 fallback，支持 num→int。
+  static int _optInt(Map<String, dynamic> j, String field, int fallback) {
+    final v = j[field];
+    if (v == null) return fallback;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? fallback;
+  }
+
+  /// 可选 bool：null 时返回 fallback，兼容字符串 "true"/"false"。
+  static bool _optBool(Map<String, dynamic> j, String field, bool fallback) {
+    final v = j[field];
+    if (v == null) return fallback;
+    if (v is bool) return v;
+    if (v is String) return v.toLowerCase() == 'true';
+    if (v is num) return v != 0;
+    return fallback;
+  }
+
+  /// 可选 String?：null 返回 null，非 null 转为 String。
+  static String? _nullableStr(Map<String, dynamic> j, String field) {
+    final v = j[field];
+    if (v == null) return null;
+    return v is String ? v : v.toString();
+  }
+
   /// 实际数据还原逻辑（事务内执行）
   Future<int> _restoreData(AppDatabase db, Map<String, dynamic> data) async {
     await db.transaction(() async {
@@ -234,10 +297,10 @@ class WebDavService {
               .into(db.rooms)
               .insert(
                 RoomsCompanion.insert(
-                  id: j['id'] as String,
-                  name: j['name'] as String,
-                  emoji: j['emoji'] as String,
-                  color: j['color'] as int,
+                  id: _reqStr(j, 'id', 'rooms'),
+                  name: _reqStr(j, 'name', 'rooms'),
+                  emoji: _reqStr(j, 'emoji', 'rooms'),
+                  color: _reqInt(j, 'color', 'rooms'),
                 ),
               );
         }
@@ -251,13 +314,13 @@ class WebDavService {
               .into(db.cabinets)
               .insert(
                 CabinetsCompanion.insert(
-                  id: j['id'] as String,
-                  name: j['name'] as String,
-                  emoji: j['emoji'] as String,
-                  color: j['color'] as int,
-                  roomId: j['roomId'] as String,
-                  hasPhoto: Value(j['hasPhoto'] as bool? ?? false),
-                  photoPath: Value(j['photoPath'] as String?),
+                  id: _reqStr(j, 'id', 'cabinets'),
+                  name: _reqStr(j, 'name', 'cabinets'),
+                  emoji: _reqStr(j, 'emoji', 'cabinets'),
+                  color: _reqInt(j, 'color', 'cabinets'),
+                  roomId: _reqStr(j, 'roomId', 'cabinets'),
+                  hasPhoto: Value(_optBool(j, 'hasPhoto', false)),
+                  photoPath: Value(_nullableStr(j, 'photoPath')),
                 ),
               );
         }
@@ -270,12 +333,12 @@ class WebDavService {
               .into(db.slots)
               .insert(
                 SlotsCompanion.insert(
-                  id: j['id'] as String,
-                  name: j['name'] as String,
-                  emoji: j['emoji'] as String,
-                  color: j['color'] as int,
-                  cabinetId: j['cabinetId'] as String,
-                  expectedItems: Value(j['expectedItems'] as int? ?? 1),
+                  id: _reqStr(j, 'id', 'slots'),
+                  name: _reqStr(j, 'name', 'slots'),
+                  emoji: _reqStr(j, 'emoji', 'slots'),
+                  color: _reqInt(j, 'color', 'slots'),
+                  cabinetId: _reqStr(j, 'cabinetId', 'slots'),
+                  expectedItems: Value(_optInt(j, 'expectedItems', 1)),
                 ),
               );
         }
@@ -289,10 +352,10 @@ class WebDavService {
               .into(db.spaceItems)
               .insert(
                 SpaceItemsCompanion.insert(
-                  emoji: j['emoji'] as String,
-                  name: j['name'] as String,
-                  meta: j['meta'] as String,
-                  slotId: j['slotId'] as String,
+                  emoji: _reqStr(j, 'emoji', 'spaceItems'),
+                  name: _reqStr(j, 'name', 'spaceItems'),
+                  meta: _reqStr(j, 'meta', 'spaceItems'),
+                  slotId: _reqStr(j, 'slotId', 'spaceItems'),
                 ),
               );
         }
@@ -301,40 +364,51 @@ class WebDavService {
       // ─── 恢复 items（含全部字段）──────────────
       if (data['items'] != null) {
         for (final j in (data['items'] as List).cast<Map<String, dynamic>>()) {
+          final priceRaw = j['price'];
+          final price = priceRaw is num
+              ? priceRaw.toDouble()
+              : double.tryParse(priceRaw?.toString() ?? '') ?? 0.0;
+          final purchaseDateStr = _reqStr(j, 'purchaseDate', 'items');
+          final purchaseDate = DateTime.tryParse(purchaseDateStr);
+          if (purchaseDate == null) {
+            throw FormatException(
+              '恢复失败: items.purchaseDate 无法解析为日期 "$purchaseDateStr"',
+            );
+          }
           await db
               .into(db.items)
               .insert(
                 ItemsCompanion.insert(
-                  id: j['id'] as String,
-                  name: j['name'] as String,
-                  price: (j['price'] as num).toDouble(),
-                  purchaseDate: DateTime.parse(j['purchaseDate'] as String),
-                  emoji: Value(j['emoji'] as String? ?? ''),
-                  category: Value(j['category'] as String? ?? '未分类'),
-                  location: Value(j['location'] as String? ?? '未知'),
-                  warrantyDays: Value(j['warrantyDays'] as int? ?? 0),
-                  shelfLifeDays: Value(j['shelfLifeDays'] as int? ?? 0),
-                  status: Value(j['status'] as String? ?? 'safe'),
-                  categoryKey: Value(j['categoryKey'] as String? ?? ''),
-                  cabinetId: Value(j['cabinetId'] as String?),
-                  slotId: Value(j['slotId'] as String?),
-                  photos: Value(j['photos'] as String? ?? '[]'),
-                  brand: Value(j['brand'] as String? ?? ''),
-                  note: Value(j['note'] as String? ?? ''),
-                  templateKey: Value(j['templateKey'] as String? ?? 'none'),
-                  templateData: Value(j['templateData'] as String? ?? '{}'),
-                  source: Value(j['source'] as String? ?? '线下购买'),
+                  id: _reqStr(j, 'id', 'items'),
+                  name: _reqStr(j, 'name', 'items'),
+                  price: price,
+                  purchaseDate: purchaseDate,
+                  emoji: Value(_optStr(j, 'emoji', '')),
+                  category: Value(_optStr(j, 'category', '未分类')),
+                  location: Value(_optStr(j, 'location', '未知')),
+                  warrantyDays: Value(_optInt(j, 'warrantyDays', 0)),
+                  shelfLifeDays: Value(_optInt(j, 'shelfLifeDays', 0)),
+                  status: Value(_optStr(j, 'status', 'safe')),
+                  categoryKey: Value(_optStr(j, 'categoryKey', '')),
+                  cabinetId: Value(_nullableStr(j, 'cabinetId')),
+                  slotId: Value(_nullableStr(j, 'slotId')),
+                  photos: Value(_optStr(j, 'photos', '[]')),
+                  brand: Value(_optStr(j, 'brand', '')),
+                  note: Value(_optStr(j, 'note', '')),
+                  templateKey: Value(_optStr(j, 'templateKey', 'none')),
+                  templateData: Value(_optStr(j, 'templateData', '{}')),
+                  source: Value(_optStr(j, 'source', '线下购买')),
                   warrantyReminderOn: Value(
-                    j['warrantyReminderOn'] as bool? ?? false,
+                    _optBool(j, 'warrantyReminderOn', false),
                   ),
                   shelfLifeReminderOn: Value(
-                    j['shelfLifeReminderOn'] as bool? ?? false,
+                    _optBool(j, 'shelfLifeReminderOn', false),
                   ),
                   maintenanceReminderOn: Value(
-                    j['maintenanceReminderOn'] as bool? ?? false,
+                    _optBool(j, 'maintenanceReminderOn', false),
                   ),
                   maintenanceCycle: Value(
-                    j['maintenanceCycle'] as String? ?? '',
+                    _optStr(j, 'maintenanceCycle', ''),
                   ),
                 ),
               );
@@ -349,11 +423,11 @@ class WebDavService {
               .into(db.categories)
               .insert(
                 CategoriesCompanion.insert(
-                  id: j['id'] as String,
-                  label: j['label'] as String,
-                  emoji: j['emoji'] as String,
-                  isBuiltIn: Value(j['isBuiltIn'] as bool? ?? false),
-                  sortOrder: Value(j['sortOrder'] as int? ?? 0),
+                  id: _reqStr(j, 'id', 'categories'),
+                  label: _reqStr(j, 'label', 'categories'),
+                  emoji: _reqStr(j, 'emoji', 'categories'),
+                  isBuiltIn: Value(_optBool(j, 'isBuiltIn', false)),
+                  sortOrder: Value(_optInt(j, 'sortOrder', 0)),
                 ),
               );
         }
@@ -363,17 +437,23 @@ class WebDavService {
       if (data['importHistory'] != null) {
         for (final j
             in (data['importHistory'] as List).cast<Map<String, dynamic>>()) {
+          final importedAtStr = _optStr(j, 'importedAt', '');
+          final importedAt = importedAtStr.isNotEmpty
+              ? DateTime.tryParse(importedAtStr)
+              : null;
           await db
               .into(db.importHistory)
               .insert(
                 ImportHistoryCompanion.insert(
-                  platformKey: j['platformKey'] as String,
-                  emoji: j['emoji'] as String,
-                  title: j['title'] as String,
-                  meta: j['meta'] as String,
-                  count: j['count'] as int,
-                  iconBg: j['iconBg'] as int,
-                  importedAt: Value(DateTime.parse(j['importedAt'] as String)),
+                  platformKey: _reqStr(j, 'platformKey', 'importHistory'),
+                  emoji: _reqStr(j, 'emoji', 'importHistory'),
+                  title: _reqStr(j, 'title', 'importHistory'),
+                  meta: _reqStr(j, 'meta', 'importHistory'),
+                  count: _reqInt(j, 'count', 'importHistory'),
+                  iconBg: _reqInt(j, 'iconBg', 'importHistory'),
+                  importedAt: importedAt != null
+                      ? Value(importedAt)
+                      : const Value.absent(),
                 ),
               );
         }
@@ -383,14 +463,14 @@ class WebDavService {
       if (data['settings'] != null) {
         for (final s
             in (data['settings'] as List).cast<Map<String, dynamic>>()) {
-          final key = s['key'] as String;
+          final key = _reqStr(s, 'key', 'settings');
           if (!key.startsWith('webdav_')) {
             await db
                 .into(db.settings)
                 .insertOnConflictUpdate(
                   SettingsCompanion.insert(
                     key: key,
-                    value: Value(s['value'] as String),
+                    value: Value(_optStr(s, 'value', '')),
                   ),
                 );
           }
@@ -399,8 +479,9 @@ class WebDavService {
     });
 
     // 返回物品数量（优先用元数据，否则从实际数据计算）
-    final metaCount = data['itemCount'] as int?;
-    if (metaCount != null) return metaCount;
+    final metaCount = data['itemCount'];
+    if (metaCount is int) return metaCount;
+    if (metaCount is num) return metaCount.toInt();
     final itemsList = data['items'] as List?;
     return itemsList?.length ?? 0;
   }

@@ -287,7 +287,6 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildTopBar(),
                   Expanded(
                     child: _isLoading
                         ? const Center(
@@ -296,8 +295,9 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
                             ),
                           )
                         : ListView(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                             children: [
+                              _buildTopBar(),
                               _buildConfigCard(),
                               const SizedBox(height: 16),
                               _buildActionCard(),
@@ -395,7 +395,7 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
       child: Row(
         children: [
           GestureDetector(

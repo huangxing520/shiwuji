@@ -5,6 +5,7 @@ import '../../widgets/emoji_text.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/toast_utils.dart';
 import '../../models/storage.dart';
+import '../../providers/item_providers.dart';
 import '../../providers/storage_providers.dart';
 import 'stats_banner.dart';
 import 'add_space_modal.dart';
@@ -34,7 +35,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
   bool _showItemsModal = false;
   String _itemsModalTitle = '';
   String _itemsModalSlotId = '';
-  final Set<int> _selectedItemIds = {}; // 选中物品的数据库 id
+  final Set<String> _selectedItemIds = {}; // 选中物品的 Item.id（UUID 字符串）
 
   // 编辑模态框状态
   bool _showEditModal = false;
@@ -42,6 +43,9 @@ class _StoragePageState extends ConsumerState<StoragePage> {
 
   // 批量操作进行中
   bool _batchProcessing = false;
+
+  // 删除前置检查进行中
+  bool _deleteChecking = false;
 
   // ========== 导航 ==========
   void _navigateLevel(int level) {
@@ -239,7 +243,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
               ),
               title: const Text('删除房间'),
               subtitle: Text(
-                '将一并删除其下所有柜体、格子和物品',
+                '将一并删除其下所有柜体与格子（含物品时不可删除）',
                 style: TextStyle(fontSize: 11, color: AppColors.textHint),
               ),
               onTap: () {
@@ -305,7 +309,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
               ),
               title: const Text('删除柜体'),
               subtitle: Text(
-                '将一并删除其下所有格子和物品',
+                '将一并删除其下所有格子（含物品时不可删除）',
                 style: TextStyle(fontSize: 11, color: AppColors.textHint),
               ),
               onTap: () {
@@ -372,7 +376,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
               ),
               title: const Text('删除格子'),
               subtitle: Text(
-                '将一并删除格子内的所有物品',
+                '含物品时不可删除，请先迁移格子内物品',
                 style: TextStyle(fontSize: 11, color: AppColors.textHint),
               ),
               onTap: () {
@@ -442,12 +446,26 @@ class _StoragePageState extends ConsumerState<StoragePage> {
   }
 
   // ========== 删除确认 ==========
-  void _confirmDeleteRoom(Room room) {
+  Future<void> _confirmDeleteRoom(Room room) async {
+    setState(() => _deleteChecking = true);
+    DeletionBlocker? blocker;
+    try {
+      blocker = await ref
+          .read(roomActionsProvider.notifier)
+          .checkRoomDeletion(room.id);
+    } finally {
+      if (mounted) setState(() => _deleteChecking = false);
+    }
+    if (!mounted) return;
+    if (blocker != null) {
+      _showDeleteBlockedDialog(blocker);
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除房间'),
-        content: Text('确定删除「${room.name}」？将一并删除其下所有柜体、格子和物品，此操作不可撤销。'),
+        content: Text('确定删除「${room.name}」？此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -467,12 +485,26 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     );
   }
 
-  void _confirmDeleteCabinet(Cabinet cabinet, String roomId) {
+  Future<void> _confirmDeleteCabinet(Cabinet cabinet, String roomId) async {
+    setState(() => _deleteChecking = true);
+    DeletionBlocker? blocker;
+    try {
+      blocker = await ref
+          .read(cabinetActionsProvider.notifier)
+          .checkCabinetDeletion(cabinet.id);
+    } finally {
+      if (mounted) setState(() => _deleteChecking = false);
+    }
+    if (!mounted) return;
+    if (blocker != null) {
+      _showDeleteBlockedDialog(blocker);
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除柜体'),
-        content: Text('确定删除「${cabinet.name}」？将一并删除其下所有格子和物品，此操作不可撤销。'),
+        content: Text('确定删除「${cabinet.name}」？此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -494,12 +526,26 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     );
   }
 
-  void _confirmDeleteSlot(Slot slot, String cabinetId) {
+  Future<void> _confirmDeleteSlot(Slot slot, String cabinetId) async {
+    setState(() => _deleteChecking = true);
+    DeletionBlocker? blocker;
+    try {
+      blocker = await ref
+          .read(slotActionsProvider.notifier)
+          .checkSlotDeletion(slot.id);
+    } finally {
+      if (mounted) setState(() => _deleteChecking = false);
+    }
+    if (!mounted) return;
+    if (blocker != null) {
+      _showDeleteBlockedDialog(blocker);
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除格子'),
-        content: Text('确定删除「${slot.name}」？将一并删除格子内的所有物品，此操作不可撤销。'),
+        content: Text('确定删除「${slot.name}」？此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -521,7 +567,26 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     );
   }
 
-  void _toggleItemSelection(int itemId) {
+  /// 删除被阻止时的提示对话框：指明具体子单元路径与物品数
+  void _showDeleteBlockedDialog(DeletionBlocker blocker) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('无法删除'),
+        content: Text(
+          '「${blocker.path}」中存在 ${blocker.count} 件物品，请先将物品迁移至其他收纳位置后再删除。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('我知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleItemSelection(String itemId) {
     setState(() {
       if (_selectedItemIds.contains(itemId)) {
         _selectedItemIds.remove(itemId);
@@ -558,8 +623,13 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     setState(() => _batchProcessing = true);
     try {
       await ref
-          .read(spaceItemActionsProvider.notifier)
-          .migrateItems(_selectedItemIds.toList(), target.id);
+          .read(itemsProvider.notifier)
+          .migrateItems(
+            _selectedItemIds.toList(),
+            cabinetId: target.cabinetId,
+            slotId: target.id,
+            locationLabel: target.pathLabel,
+          );
       if (mounted) {
         ToastUtils.show(
           context,
@@ -701,8 +771,7 @@ class _StoragePageState extends ConsumerState<StoragePage> {
   // ========== 批量删除 ==========
   Future<void> _batchDelete() async {
     if (_selectedItemIds.isEmpty) return;
-    final slotId = _itemsModalSlotId;
-    if (slotId.isEmpty) return;
+    if (_itemsModalSlotId.isEmpty) return;
 
     // 确认对话框
     final confirmed = await showDialog<bool>(
@@ -728,8 +797,8 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     setState(() => _batchProcessing = true);
     try {
       await ref
-          .read(spaceItemActionsProvider.notifier)
-          .deleteItems(_selectedItemIds.toList(), slotId);
+          .read(itemsProvider.notifier)
+          .removeItems(_selectedItemIds.toList());
       if (mounted) {
         ToastUtils.show(context, '已删除 ${_selectedItemIds.length} 件物品');
       }
@@ -792,6 +861,13 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                   child: const Center(child: CircularProgressIndicator()),
                 ),
               ),
+            if (_deleteChecking)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              ),
           ],
         ),
       ),
@@ -843,13 +919,13 @@ class _StoragePageState extends ConsumerState<StoragePage> {
     );
   }
 
-  /// 物品模态框 — 从 provider 读取数据
+  /// 物品模态框 — 从 itemsProvider 读取该格位下的物品（主物品，按 slotId 过滤）
   Widget _buildItemsModalFromProvider() {
     if (_itemsModalSlotId.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final itemsAsync = ref.watch(spaceItemsBySlotProvider(_itemsModalSlotId));
+    final itemsAsync = ref.watch(itemsProvider);
 
     return itemsAsync.when(
       loading: () => Positioned.fill(
@@ -869,15 +945,20 @@ class _StoragePageState extends ConsumerState<StoragePage> {
           ),
         ),
       ),
-      data: (items) => ItemsPreviewModal(
-        title: _itemsModalTitle,
-        items: items,
-        selectedItemIds: _selectedItemIds,
-        onClose: _closeItemsModal,
-        onToggleItem: _toggleItemSelection,
-        onBatchMigrate: _batchMigrate,
-        onBatchDelete: _batchDelete,
-      ),
+      data: (allItems) {
+        final items = allItems
+            .where((i) => i.slotId == _itemsModalSlotId)
+            .toList();
+        return ItemsPreviewModal(
+          title: _itemsModalTitle,
+          items: items,
+          selectedItemIds: _selectedItemIds,
+          onClose: _closeItemsModal,
+          onToggleItem: _toggleItemSelection,
+          onBatchMigrate: _batchMigrate,
+          onBatchDelete: _batchDelete,
+        );
+      },
     );
   }
 

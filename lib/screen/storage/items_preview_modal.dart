@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
-import '../../models/storage.dart';
+import '../../models/item.dart';
 import '../../widgets/emoji_text.dart';
 
-/// 物品预览模态框 — 展示某个格子/区域内的物品列表，支持批量迁移与批量删除
+/// 物品预览模态框 — 展示某个格子/区域内的物品列表，支持批量迁移与批量删除。
+/// 数据源为 items 表（主物品），按 slotId 过滤。
 class ItemsPreviewModal extends StatelessWidget {
   final String title;
-  final List<SpaceItem> items;
-  final Set<int> selectedItemIds; // 使用数据库 id
+  final List<Item> items;
+  final Set<String> selectedItemIds; // 使用 Item.id（UUID 字符串）
   final VoidCallback onClose;
-  final ValueChanged<int> onToggleItem;
+  final ValueChanged<String> onToggleItem;
   final VoidCallback onBatchMigrate;
   final VoidCallback onBatchDelete;
 
@@ -217,7 +218,11 @@ class ItemsPreviewModal extends StatelessWidget {
     );
   }
 
-  Widget _buildItemListTile(SpaceItem item, bool isSelected) {
+  Widget _buildItemListTile(Item item, bool isSelected) {
+    // 副标题：分类 · 品牌（品牌为空时仅显示分类）
+    final meta = item.brand.isNotEmpty
+        ? '${item.category} · ${item.brand}'
+        : item.category;
     return GestureDetector(
       onTap: () => onToggleItem(item.id),
       child: Container(
@@ -253,7 +258,7 @@ class ItemsPreviewModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    item.meta,
+                    meta,
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textHint,

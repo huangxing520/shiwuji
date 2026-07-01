@@ -60,11 +60,21 @@ abstract class _$ProfileManager extends $AsyncNotifier<Map<String, String>> {
 }
 
 /// 个人中心数据统计
+///
+/// 通过监听 itemsProvider / roomsProvider / categoryManagerProvider，
+/// 使「数据概览」随数据库变化实时刷新，避免展示过期或空数据。
+/// 物品数量与总价值直接复用 [itemCountProvider] / [totalValueProvider]
+/// （派生自内存中的 itemsProvider，免去额外 SQL，并与首页口径一致）。
 
 @ProviderFor(profileStats)
 final profileStatsProvider = ProfileStatsProvider._();
 
 /// 个人中心数据统计
+///
+/// 通过监听 itemsProvider / roomsProvider / categoryManagerProvider，
+/// 使「数据概览」随数据库变化实时刷新，避免展示过期或空数据。
+/// 物品数量与总价值直接复用 [itemCountProvider] / [totalValueProvider]
+/// （派生自内存中的 itemsProvider，免去额外 SQL，并与首页口径一致）。
 
 final class ProfileStatsProvider
     extends
@@ -77,6 +87,11 @@ final class ProfileStatsProvider
         $FutureModifier<Map<String, dynamic>>,
         $FutureProvider<Map<String, dynamic>> {
   /// 个人中心数据统计
+  ///
+  /// 通过监听 itemsProvider / roomsProvider / categoryManagerProvider，
+  /// 使「数据概览」随数据库变化实时刷新，避免展示过期或空数据。
+  /// 物品数量与总价值直接复用 [itemCountProvider] / [totalValueProvider]
+  /// （派生自内存中的 itemsProvider，免去额外 SQL，并与首页口径一致）。
   ProfileStatsProvider._()
     : super(
         from: null,
@@ -103,7 +118,7 @@ final class ProfileStatsProvider
   }
 }
 
-String _$profileStatsHash() => r'4bf4638b3c18fd10717eb7adf02c21d4e2573efc';
+String _$profileStatsHash() => r'3fb28911f1c71e5ffdfebefb5bdd3281d1b23e2a';
 
 /// 多 AI Provider 配置管理
 ///
@@ -145,7 +160,7 @@ final class AiConfigManagerProvider
   AiConfigManager create() => AiConfigManager();
 }
 
-String _$aiConfigManagerHash() => r'b63348426ff6b59b76e8110049d3354b9e77c397';
+String _$aiConfigManagerHash() => r'e233351dc3527df34cd2c00dc606c974cc31da8c';
 
 /// 多 AI Provider 配置管理
 ///

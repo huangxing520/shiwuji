@@ -288,13 +288,13 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
           Column(
             children: [
               SizedBox(height: MediaQuery.of(context).padding.top),
-              _buildTopBar(),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildTopBar(),
                       const SizedBox(height: 8),
                       _buildHeroBanner(),
                       const SizedBox(height: 20),
@@ -349,7 +349,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
   // ==================== Top Navigation Bar ====================
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      padding: const EdgeInsets.only(top: 8, bottom: 0),
       child: Row(
         children: [
           // Back button
