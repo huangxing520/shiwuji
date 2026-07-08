@@ -546,7 +546,7 @@ final class StorageStatsProvider
   }
 }
 
-String _$storageStatsHash() => r'01dde11578036e5564cb4d912b3d7620e5a8a9a5';
+String _$storageStatsHash() => r'9018d51b74b935f946921209de4a76a8872d68a4';
 
 /// 查询所有柜体+格子，扁平化为节点列表（供选择器使用）
 

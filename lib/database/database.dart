@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -43,8 +43,11 @@ class AppDatabase extends _$AppDatabase {
       await _seedDefaultData();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      // 迁移逻辑已清空：执行完全数据清空后，数据库将从零重建至 v1。
-      // 后续若再次升级 schema，请在此处按版本增量编写迁移代码。
+      // v2: 新增「是否借出」字段（is_borrowed，布尔，默认 false）
+      // addColumn 为单条 DDL 且带默认值，幂等安全。
+      if (from < 2) {
+        await m.addColumn(items, items.isBorrowed);
+      }
     },
   );
 

@@ -410,6 +410,7 @@ class WebDavService {
                   maintenanceCycle: Value(
                     _optStr(j, 'maintenanceCycle', ''),
                   ),
+                  isBorrowed: Value(_optBool(j, 'isBorrowed', false)),
                 ),
               );
         }

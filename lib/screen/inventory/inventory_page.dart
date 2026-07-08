@@ -64,6 +64,18 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   String? _selectedPriceRange;
   String? _selectedLocation;
   String? _selectedStatus;
+  String? _selectedBorrowedStatus;
+  DateTime? _purchaseStart;
+  DateTime? _purchaseEnd;
+  // 筛选弹窗是否处于打开状态。
+  // StatefulShellRoute.indexedStack 切换分支不会自动关闭分支内的 modal route，
+  // 因此需显式跟踪，以便从首页快捷入口跳转回来时主动关闭残留弹窗。
+  bool _filterPanelOpen = false;
+  // 弹窗外部关闭信号：每次自增触发 FilterPanel 用自身 context 执行 pop。
+  // showModalBottomSheet 默认 useRootNavigator=false，弹窗 push 到最近层导航器
+  // （StatefulShellBranch 的分支导航器），而本页 build context 解析到的 Navigator
+  // 未必是同一个，故通过信号让弹窗自关，保证 pop 命中正确的导航器。
+  final ValueNotifier<int> _filterDismissSignal = ValueNotifier(0);
 
   // 标记本次 pending 分类是否已被消费，避免 build 多次触发时重复应用
   bool _pendingCategoryApplied = false;
@@ -72,6 +84,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _filterDismissSignal.dispose();
     super.dispose();
   }
 
@@ -83,6 +96,9 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     _selectedPriceRange = null;
     _selectedLocation = null;
     _selectedStatus = null;
+    _selectedBorrowedStatus = null;
+    _purchaseStart = null;
+    _purchaseEnd = null;
     _sortType = SortType.newest;
     _sortDropdownOpen = false;
     _batchMode = false;
@@ -156,6 +172,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     if (_selectedPriceRange != null && _selectedPriceRange != '不限') count++;
     if (_selectedLocation != null && _selectedLocation != '全部') count++;
     if (_selectedStatus != null && _selectedStatus != '全部') count++;
+    if (_selectedBorrowedStatus != null && _selectedBorrowedStatus != '全部') {
+      count++;
+    }
+    if (_purchaseStart != null || _purchaseEnd != null) count++;
     return count;
   }
 
@@ -215,6 +235,39 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                 .where((i) => i.warrantyStatus == target)
                 .toList();
           }
+        }
+        // 借出状态筛选
+        if (_selectedBorrowedStatus != null &&
+            _selectedBorrowedStatus != '全部') {
+          if (_selectedBorrowedStatus == '已借出') {
+            filtered = filtered.where((i) => i.isBorrowed).toList();
+          } else if (_selectedBorrowedStatus == '可借出') {
+            filtered = filtered.where((i) => !i.isBorrowed).toList();
+          }
+        }
+        // 购买时间区间筛选（按日粒度；结束日含当天，取当日 23:59:59）
+        if (_purchaseStart != null) {
+          final start = DateTime(
+            _purchaseStart!.year,
+            _purchaseStart!.month,
+            _purchaseStart!.day,
+          );
+          filtered = filtered
+              .where((i) => !i.purchaseDate.isBefore(start))
+              .toList();
+        }
+        if (_purchaseEnd != null) {
+          final end = DateTime(
+            _purchaseEnd!.year,
+            _purchaseEnd!.month,
+            _purchaseEnd!.day,
+            23,
+            59,
+            59,
+          );
+          filtered = filtered
+              .where((i) => !i.purchaseDate.isAfter(end))
+              .toList();
         }
         switch (_sortType) {
           case SortType.newest:
@@ -336,9 +389,16 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
         _selectedStatus = label;
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(pendingStatusFilterProvider.notifier).set(null);
+        if (!mounted) return;
+        // 从首页快捷入口（在保/过保/即将到期）跳转回来时，若筛选弹窗仍敞开，
+        // 其内部状态为打开时的快照，会遮挡已更新的列表并显示过期筛选条件。
+        // 通过 _filterDismissSignal 通知弹窗用自身 context 执行 pop（maybePop），
+        // 确保命中承载弹窗的分支导航器；本页 context 解析的 Navigator 未必相同。
+        if (_filterPanelOpen) {
+          _filterDismissSignal.value = _filterDismissSignal.value + 1;
+          _filterPanelOpen = false;
         }
+        ref.read(pendingStatusFilterProvider.notifier).set(null);
       });
     }
 
@@ -888,11 +948,20 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                           ),
                         ),
                       ),
-                    // 状态标签
+                    // 状态标签 + 借出标记
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: _buildStatusBadge(item),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _buildStatusBadge(item),
+                          if (item.isBorrowed) ...[
+                            const SizedBox(height: 4),
+                            _buildBorrowedBadge(),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1085,6 +1154,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                   _buildPrice(item.price),
                   const SizedBox(height: 3),
                   _buildStatusBadge(item, isSmall: true),
+                  if (item.isBorrowed) ...[
+                    const SizedBox(height: 3),
+                    _buildBorrowedBadge(isSmall: true),
+                  ],
                 ],
               ),
             ],
@@ -1129,6 +1202,28 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
           fontSize: isSmall ? 10 : 10,
           fontWeight: FontWeight.w700,
           color: textColor,
+        ),
+      ),
+    );
+  }
+
+  /// 借出标记徽标：已借出物品在卡片上额外展示，便于筛选时一眼辨识。
+  Widget _buildBorrowedBadge({bool isSmall = false}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 6 : 8,
+        vertical: isSmall ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.dangerLight,
+        borderRadius: BorderRadius.circular(isSmall ? 8 : 10),
+      ),
+      child: const Text(
+        '已借出',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: AppColors.danger,
         ),
       ),
     );
@@ -1248,26 +1343,48 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
   // ─── Filter Panel (Bottom Sheet) ───────────
 
   void _showFilterPanel() {
+    _filterPanelOpen = true;
     FilterPanel.show(
       context,
       initialPriceRange: _selectedPriceRange,
       initialLocation: _selectedLocation,
       initialStatus: _selectedStatus,
-      onApply: (priceRange, location, status) {
-        setState(() {
-          _selectedPriceRange = priceRange;
-          _selectedLocation = location;
-          _selectedStatus = status;
-        });
-        ToastUtils.show(context, '已应用筛选条件');
-      },
+      initialBorrowedStatus: _selectedBorrowedStatus,
+      initialPurchaseStart: _purchaseStart,
+      initialPurchaseEnd: _purchaseEnd,
+      dismissSignal: _filterDismissSignal,
+      onApply:
+          (
+            priceRange,
+            location,
+            status,
+            borrowedStatus,
+            purchaseStart,
+            purchaseEnd,
+          ) {
+            setState(() {
+              _selectedPriceRange = priceRange;
+              _selectedLocation = location;
+              _selectedStatus = status;
+              _selectedBorrowedStatus = borrowedStatus;
+              _purchaseStart = purchaseStart;
+              _purchaseEnd = purchaseEnd;
+            });
+            ToastUtils.show(context, '已应用筛选条件');
+          },
       onReset: () {
         setState(() {
           _selectedPriceRange = null;
           _selectedLocation = null;
           _selectedStatus = null;
+          _selectedBorrowedStatus = null;
+          _purchaseStart = null;
+          _purchaseEnd = null;
         });
       },
-    );
+    ).then((_) {
+      // 弹窗无论以何种方式关闭（确认/重置/点遮罩/程序 pop）都清除标记
+      if (mounted) _filterPanelOpen = false;
+    });
   }
 }

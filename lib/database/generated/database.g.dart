@@ -265,6 +265,21 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _isBorrowedMeta = const VerificationMeta(
+    'isBorrowed',
+  );
+  @override
+  late final GeneratedColumn<bool> isBorrowed = GeneratedColumn<bool>(
+    'is_borrowed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_borrowed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -290,6 +305,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     shelfLifeReminderOn,
     maintenanceReminderOn,
     maintenanceCycle,
+    isBorrowed,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -476,6 +492,12 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         ),
       );
     }
+    if (data.containsKey('is_borrowed')) {
+      context.handle(
+        _isBorrowedMeta,
+        isBorrowed.isAcceptableOrUnknown(data['is_borrowed']!, _isBorrowedMeta),
+      );
+    }
     return context;
   }
 
@@ -577,6 +599,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.string,
         data['${effectivePrefix}maintenance_cycle'],
       )!,
+      isBorrowed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_borrowed'],
+      )!,
     );
   }
 
@@ -610,6 +636,7 @@ class Item extends DataClass implements Insertable<Item> {
   final bool shelfLifeReminderOn;
   final bool maintenanceReminderOn;
   final String maintenanceCycle;
+  final bool isBorrowed;
   const Item({
     required this.id,
     required this.name,
@@ -634,6 +661,7 @@ class Item extends DataClass implements Insertable<Item> {
     required this.shelfLifeReminderOn,
     required this.maintenanceReminderOn,
     required this.maintenanceCycle,
+    required this.isBorrowed,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -665,6 +693,7 @@ class Item extends DataClass implements Insertable<Item> {
     map['shelf_life_reminder_on'] = Variable<bool>(shelfLifeReminderOn);
     map['maintenance_reminder_on'] = Variable<bool>(maintenanceReminderOn);
     map['maintenance_cycle'] = Variable<String>(maintenanceCycle);
+    map['is_borrowed'] = Variable<bool>(isBorrowed);
     return map;
   }
 
@@ -697,6 +726,7 @@ class Item extends DataClass implements Insertable<Item> {
       shelfLifeReminderOn: Value(shelfLifeReminderOn),
       maintenanceReminderOn: Value(maintenanceReminderOn),
       maintenanceCycle: Value(maintenanceCycle),
+      isBorrowed: Value(isBorrowed),
     );
   }
 
@@ -733,6 +763,7 @@ class Item extends DataClass implements Insertable<Item> {
         json['maintenanceReminderOn'],
       ),
       maintenanceCycle: serializer.fromJson<String>(json['maintenanceCycle']),
+      isBorrowed: serializer.fromJson<bool>(json['isBorrowed']),
     );
   }
   @override
@@ -762,6 +793,7 @@ class Item extends DataClass implements Insertable<Item> {
       'shelfLifeReminderOn': serializer.toJson<bool>(shelfLifeReminderOn),
       'maintenanceReminderOn': serializer.toJson<bool>(maintenanceReminderOn),
       'maintenanceCycle': serializer.toJson<String>(maintenanceCycle),
+      'isBorrowed': serializer.toJson<bool>(isBorrowed),
     };
   }
 
@@ -789,6 +821,7 @@ class Item extends DataClass implements Insertable<Item> {
     bool? shelfLifeReminderOn,
     bool? maintenanceReminderOn,
     String? maintenanceCycle,
+    bool? isBorrowed,
   }) => Item(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -813,6 +846,7 @@ class Item extends DataClass implements Insertable<Item> {
     shelfLifeReminderOn: shelfLifeReminderOn ?? this.shelfLifeReminderOn,
     maintenanceReminderOn: maintenanceReminderOn ?? this.maintenanceReminderOn,
     maintenanceCycle: maintenanceCycle ?? this.maintenanceCycle,
+    isBorrowed: isBorrowed ?? this.isBorrowed,
   );
   Item copyWithCompanion(ItemsCompanion data) {
     return Item(
@@ -859,6 +893,9 @@ class Item extends DataClass implements Insertable<Item> {
       maintenanceCycle: data.maintenanceCycle.present
           ? data.maintenanceCycle.value
           : this.maintenanceCycle,
+      isBorrowed: data.isBorrowed.present
+          ? data.isBorrowed.value
+          : this.isBorrowed,
     );
   }
 
@@ -887,7 +924,8 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('warrantyReminderOn: $warrantyReminderOn, ')
           ..write('shelfLifeReminderOn: $shelfLifeReminderOn, ')
           ..write('maintenanceReminderOn: $maintenanceReminderOn, ')
-          ..write('maintenanceCycle: $maintenanceCycle')
+          ..write('maintenanceCycle: $maintenanceCycle, ')
+          ..write('isBorrowed: $isBorrowed')
           ..write(')'))
         .toString();
   }
@@ -917,6 +955,7 @@ class Item extends DataClass implements Insertable<Item> {
     shelfLifeReminderOn,
     maintenanceReminderOn,
     maintenanceCycle,
+    isBorrowed,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -944,7 +983,8 @@ class Item extends DataClass implements Insertable<Item> {
           other.warrantyReminderOn == this.warrantyReminderOn &&
           other.shelfLifeReminderOn == this.shelfLifeReminderOn &&
           other.maintenanceReminderOn == this.maintenanceReminderOn &&
-          other.maintenanceCycle == this.maintenanceCycle);
+          other.maintenanceCycle == this.maintenanceCycle &&
+          other.isBorrowed == this.isBorrowed);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -971,6 +1011,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<bool> shelfLifeReminderOn;
   final Value<bool> maintenanceReminderOn;
   final Value<String> maintenanceCycle;
+  final Value<bool> isBorrowed;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -996,6 +1037,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.shelfLifeReminderOn = const Value.absent(),
     this.maintenanceReminderOn = const Value.absent(),
     this.maintenanceCycle = const Value.absent(),
+    this.isBorrowed = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -1022,6 +1064,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.shelfLifeReminderOn = const Value.absent(),
     this.maintenanceReminderOn = const Value.absent(),
     this.maintenanceCycle = const Value.absent(),
+    this.isBorrowed = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1051,6 +1094,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<bool>? shelfLifeReminderOn,
     Expression<bool>? maintenanceReminderOn,
     Expression<String>? maintenanceCycle,
+    Expression<bool>? isBorrowed,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1080,6 +1124,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (maintenanceReminderOn != null)
         'maintenance_reminder_on': maintenanceReminderOn,
       if (maintenanceCycle != null) 'maintenance_cycle': maintenanceCycle,
+      if (isBorrowed != null) 'is_borrowed': isBorrowed,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1108,6 +1153,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<bool>? shelfLifeReminderOn,
     Value<bool>? maintenanceReminderOn,
     Value<String>? maintenanceCycle,
+    Value<bool>? isBorrowed,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -1135,6 +1181,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       maintenanceReminderOn:
           maintenanceReminderOn ?? this.maintenanceReminderOn,
       maintenanceCycle: maintenanceCycle ?? this.maintenanceCycle,
+      isBorrowed: isBorrowed ?? this.isBorrowed,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1213,6 +1260,9 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (maintenanceCycle.present) {
       map['maintenance_cycle'] = Variable<String>(maintenanceCycle.value);
     }
+    if (isBorrowed.present) {
+      map['is_borrowed'] = Variable<bool>(isBorrowed.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1245,6 +1295,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('shelfLifeReminderOn: $shelfLifeReminderOn, ')
           ..write('maintenanceReminderOn: $maintenanceReminderOn, ')
           ..write('maintenanceCycle: $maintenanceCycle, ')
+          ..write('isBorrowed: $isBorrowed, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3862,6 +3913,7 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<bool> shelfLifeReminderOn,
       Value<bool> maintenanceReminderOn,
       Value<String> maintenanceCycle,
+      Value<bool> isBorrowed,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3889,6 +3941,7 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<bool> shelfLifeReminderOn,
       Value<bool> maintenanceReminderOn,
       Value<String> maintenanceCycle,
+      Value<bool> isBorrowed,
       Value<int> rowid,
     });
 
@@ -4012,6 +4065,11 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
 
   ColumnFilters<String> get maintenanceCycle => $composableBuilder(
     column: $table.maintenanceCycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBorrowed => $composableBuilder(
+    column: $table.isBorrowed,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4139,6 +4197,11 @@ class $$ItemsTableOrderingComposer
     column: $table.maintenanceCycle,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isBorrowed => $composableBuilder(
+    column: $table.isBorrowed,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -4238,6 +4301,11 @@ class $$ItemsTableAnnotationComposer
     column: $table.maintenanceCycle,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isBorrowed => $composableBuilder(
+    column: $table.isBorrowed,
+    builder: (column) => column,
+  );
 }
 
 class $$ItemsTableTableManager
@@ -4291,6 +4359,7 @@ class $$ItemsTableTableManager
                 Value<bool> shelfLifeReminderOn = const Value.absent(),
                 Value<bool> maintenanceReminderOn = const Value.absent(),
                 Value<String> maintenanceCycle = const Value.absent(),
+                Value<bool> isBorrowed = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -4316,6 +4385,7 @@ class $$ItemsTableTableManager
                 shelfLifeReminderOn: shelfLifeReminderOn,
                 maintenanceReminderOn: maintenanceReminderOn,
                 maintenanceCycle: maintenanceCycle,
+                isBorrowed: isBorrowed,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4343,6 +4413,7 @@ class $$ItemsTableTableManager
                 Value<bool> shelfLifeReminderOn = const Value.absent(),
                 Value<bool> maintenanceReminderOn = const Value.absent(),
                 Value<String> maintenanceCycle = const Value.absent(),
+                Value<bool> isBorrowed = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -4368,6 +4439,7 @@ class $$ItemsTableTableManager
                 shelfLifeReminderOn: shelfLifeReminderOn,
                 maintenanceReminderOn: maintenanceReminderOn,
                 maintenanceCycle: maintenanceCycle,
+                isBorrowed: isBorrowed,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

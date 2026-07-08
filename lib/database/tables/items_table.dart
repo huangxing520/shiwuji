@@ -35,6 +35,8 @@ class Items extends Table {
       boolean().withDefault(const Constant(false))();
   // 保养周期（每月/每季度/每半年/每年，空字符串表示未设置）
   TextColumn get maintenanceCycle => text().withDefault(const Constant(''))();
+  // 是否已借出（false = 在家可借出，true = 已借出）
+  BoolColumn get isBorrowed => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

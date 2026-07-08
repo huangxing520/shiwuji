@@ -52,6 +52,8 @@ class ItemDetailPage extends ConsumerWidget {
           const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildTemplateSection(item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
+          _buildBorrowButton(context, ref, item),
+          const SizedBox(height: AppDimensions.spacingExtraLarge),
           _buildBottomActions(context, ref, item),
           const SizedBox(height: AppDimensions.spacingExtraLarge),
         ],
@@ -121,6 +123,105 @@ class ItemDetailPage extends ConsumerWidget {
     }
     // 有照片：轮播组件
     return PhotoCarousel(photos: item.photos);
+  }
+
+  /// 底部借出/收回按钮：文案与配色随 item.isBorrowed 实时切换。
+  /// 借出态用蓝色（收回），可借出态用金色主色（借出）。
+  Widget _buildBorrowButton(BuildContext context, WidgetRef ref, Item item) {
+    final isBorrowed = item.isBorrowed;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.spacingMedium,
+      ),
+      child: GestureDetector(
+        onTap: () => _confirmToggleBorrow(context, ref, item),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: isBorrowed
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.info, AppColors.gradientBlueEnd],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, AppColors.warning],
+                  ),
+            boxShadow: [
+              BoxShadow(
+                color: (isBorrowed ? AppColors.info : AppColors.primary)
+                    .withValues(alpha: 0.3),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isBorrowed ? Icons.assignment_return : Icons.logout,
+                size: 18,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isBorrowed ? '收回' : '借出',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 借出/收回二次确认：确认后切换 isBorrowed 并提示。
+  /// 页面通过 ref.watch(itemByIdProvider) 监听，状态变更后按钮自动重建。
+  Future<void> _confirmToggleBorrow(
+    BuildContext context,
+    WidgetRef ref,
+    Item item,
+  ) async {
+    final isBorrowed = item.isBorrowed;
+    final action = isBorrowed ? '收回' : '借出';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$action物品'),
+        content: Text('确定要$action「${item.name}」吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(itemsProvider.notifier).toggleBorrowed(item);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$action成功：${item.name}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   /// 底部操作按钮：编辑物品 + 删除物品（并排平齐）
@@ -563,6 +664,7 @@ class ItemDetailPage extends ConsumerWidget {
                 isAccent: true,
               ),
               InfoCell(label: '来源', value: item.source),
+              _BorrowStatusCell(isBorrowed: item.isBorrowed),
             ],
           ),
           if (item.note.isNotEmpty) ...[
@@ -692,6 +794,43 @@ class ItemDetailPage extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+}
+
+/// 详情页的借出状态单元格：与「来源」并排显示，用色块标签直观呈现借出态。
+/// 已借出 → 红色；可借出 → 绿色。配色与物品库 _buildStatusBadge 一致。
+class _BorrowStatusCell extends StatelessWidget {
+  final bool isBorrowed;
+
+  const _BorrowStatusCell({required this.isBorrowed});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isBorrowed ? AppColors.dangerLight : AppColors.successLight;
+    final fg = isBorrowed ? AppColors.danger : AppColors.statusUsing;
+    final text = isBorrowed ? '已借出' : '可借出';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('借出状态', style: AppTextStyles.labelMedium),
+        const SizedBox(height: 3),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

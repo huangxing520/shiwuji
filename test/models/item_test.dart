@@ -342,5 +342,46 @@ void main() {
       // 购买当天 → 下次保养日 = 购买日 + 30 天
       expect(item.nextMaintenanceDate, now.add(const Duration(days: 30)));
     });
+
+    // ─── 借出状态（isBorrowed）─────────────────────────
+    test('isBorrowed defaults to false', () {
+      final item = Item.create(name: 'Test', price: 100);
+      expect(item.isBorrowed, false);
+    });
+
+    test('copyWith toggles isBorrowed without affecting other fields', () {
+      final item = Item(
+        id: '1',
+        name: 'Test',
+        price: 100,
+        purchaseDate: fixedDate,
+      );
+      final borrowed = item.copyWith(isBorrowed: true);
+      expect(borrowed.isBorrowed, true);
+      expect(borrowed.id, '1');
+      expect(borrowed.name, 'Test');
+      expect(borrowed.price, 100);
+      expect(borrowed.purchaseDate, fixedDate);
+      // 原实例不受影响
+      expect(item.isBorrowed, false);
+    });
+
+    test('value equality: only isBorrowed differs → not equal', () {
+      final a = Item(
+        id: '1',
+        name: 'Same',
+        price: 100,
+        purchaseDate: fixedDate,
+        isBorrowed: false,
+      );
+      final b = Item(
+        id: '1',
+        name: 'Same',
+        price: 100,
+        purchaseDate: fixedDate,
+        isBorrowed: true,
+      );
+      expect(a, isNot(equals(b)));
+    });
   });
 }

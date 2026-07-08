@@ -172,7 +172,7 @@ final class ItemsProvider extends $AsyncNotifierProvider<Items, List<Item>> {
   Items create() => Items();
 }
 
-String _$itemsHash() => r'e5a3aa3b9a04e4426bc9e30524343818fe9f8a3c';
+String _$itemsHash() => r'28b96db61837498f3a1951a93e071dee67b0003c';
 
 /// 核心 Items Provider —— AsyncNotifier，从数据库读写
 

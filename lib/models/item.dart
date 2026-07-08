@@ -33,6 +33,7 @@ abstract class Item with _$Item {
     @Default(false) bool shelfLifeReminderOn,
     @Default(false) bool maintenanceReminderOn,
     @Default('') String maintenanceCycle,
+    @Default(false) bool isBorrowed,
   }) = _Item;
 
   factory Item.fromJson(Map<String, dynamic> json) => _$ItemFromJson(json);
@@ -60,6 +61,7 @@ abstract class Item with _$Item {
     bool shelfLifeReminderOn = false,
     bool maintenanceReminderOn = false,
     String maintenanceCycle = '',
+    bool isBorrowed = false,
   }) {
     return Item(
       id: const Uuid().v4(),
@@ -85,6 +87,7 @@ abstract class Item with _$Item {
       shelfLifeReminderOn: shelfLifeReminderOn,
       maintenanceReminderOn: maintenanceReminderOn,
       maintenanceCycle: maintenanceCycle,
+      isBorrowed: isBorrowed,
     );
   }
 

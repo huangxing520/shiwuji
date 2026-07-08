@@ -54,6 +54,12 @@ class Items extends _$Items {
     ref.invalidateSelf();
   }
 
+  /// 切换物品借出状态（借出 ↔ 收回），复用全量更新以同步持久化与 UI。
+  /// 详情页与物品库均通过 ref.watch(itemsProvider) 自动重建。
+  Future<void> toggleBorrowed(Item item) async {
+    await updateItem(item.copyWith(isBorrowed: !item.isBorrowed));
+  }
+
   Future<void> removeItem(String id) async {
     await _dao.deleteItem(id);
     ref.invalidateSelf();
@@ -136,6 +142,7 @@ class Items extends _$Items {
     shelfLifeReminderOn: row.shelfLifeReminderOn,
     maintenanceReminderOn: row.maintenanceReminderOn,
     maintenanceCycle: row.maintenanceCycle,
+    isBorrowed: row.isBorrowed,
   );
 
   /// Item → drift Companion（insert/update 复用）
@@ -164,6 +171,7 @@ class Items extends _$Items {
       shelfLifeReminderOn: Value(item.shelfLifeReminderOn),
       maintenanceReminderOn: Value(item.maintenanceReminderOn),
       maintenanceCycle: Value(item.maintenanceCycle),
+      isBorrowed: Value(item.isBorrowed),
     );
   }
 
