@@ -948,21 +948,6 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                           ),
                         ),
                       ),
-                    // 状态标签 + 借出标记
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _buildStatusBadge(item),
-                          if (item.isBorrowed) ...[
-                            const SizedBox(height: 4),
-                            _buildBorrowedBadge(),
-                          ],
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -995,7 +980,26 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                         ),
                       ),
                       const Spacer(),
-                      _buildPrice(item.price),
+                      // 金额 + 状态标签（在保/已借出）
+                      SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _buildPrice(item.price),
+                            Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildStatusBadge(item, isSmall: true),
+                              if (item.isBorrowed) ...[
+                                const SizedBox(width: 4),
+                                _buildBorrowedBadge(isSmall: true),
+                              ],
+                            ],
+                          ),
+                        ],
+                      )),
                     ],
                   ),
                 ),
@@ -1147,15 +1151,16 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
                   ],
                 ),
               ),
-              // 价格 + 状态
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              // 金额 + 状态标签（在保/已借出）
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _buildPrice(item.price),
-                  const SizedBox(height: 3),
+                  const SizedBox(width: 6),
                   _buildStatusBadge(item, isSmall: true),
                   if (item.isBorrowed) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(width: 4),
                     _buildBorrowedBadge(isSmall: true),
                   ],
                 ],
