@@ -3,16 +3,13 @@
 </div>
 
 <div align="center">
-  <img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="拾物记" width="128" />
+  <img src="assets/icon/swj_icon_1024.png" alt="拾物记" width="128" />
   <h1>拾物记 (ShiWuJi) — 家居物品收纳管理 App</h1>
   <p><strong>从此不再忘记东西放在哪里。</strong></p>
   <p>记录位置 · 分类管理 · 保修追踪 · AI 识别 · 多端同步</p>
   <p>
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" />
     <img src="https://img.shields.io/badge/Platform-Android%20%C2%B7%20iOS%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20Web-brightgreen.svg" alt="Platform" />
-    <img src="https://img.shields.io/github/v/release/bron1117/wupin?label=release&color=orange" alt="Latest release" />
-    <img src="https://img.shields.io/github/downloads/bron1117/wupin/total?label=downloads" alt="Total downloads" />
-    <img src="https://img.shields.io/github/last-commit/bron1117/wupin" alt="Last commit" />
   </p>
 </div>
 
