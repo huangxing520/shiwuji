@@ -1,7 +1,6 @@
 import 'package:bugsnag_flutter/bugsnag_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 import 'providers/database_provider.dart';
@@ -11,25 +10,44 @@ import 'services/encryption_service.dart';
 import 'utils/package_info_setup_web.dart'
     if (dart.library.io) 'utils/package_info_setup_io.dart';
 
+/// Bugsnag 崩溃上报 API Key。
+///
+/// 编译期注入：`flutter run/build --dart-define=BUGSNAG_API_KEY=xxx`。
+/// 未注入时为空字符串，Bugsnag 直接跳过启动（不再是必需资源，克隆即可构建）。
+const String _bugsnagApiKey = String.fromEnvironment('BUGSNAG_API_KEY');
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerPackageInfoPlus();
 
-  // 加载 .env 配置文件（含 BUGSNAG_API_KEY 等敏感信息）
-  await dotenv.load(fileName: '.env');
+  // 启动初始化：任何一步失败都只降级，绝不让整个 App 白屏。
+  // 只有 runApp 本身是关键路径，其余全部包 try/catch。
+  // 启动 Bugsnag 崩溃监控，API Key 来自编译期 --dart-define
+  await _safeInit('启动 Bugsnag', () async {
+    if (_bugsnagApiKey.isNotEmpty) {
+      await bugsnag.start(apiKey: _bugsnagApiKey);
+    }
+  });
 
-  // 启动 Bugsnag 崩溃监控，API Key 从 .env 读取
-  final bugsnagApiKey = dotenv.env['BUGSNAG_API_KEY'] ?? '';
-  if (bugsnagApiKey.isNotEmpty) {
-    await bugsnag.start(apiKey: bugsnagApiKey);
-  }
+  await _safeInit('初始化通知', () => NotificationService().init());
+  await _safeInit('初始化首启动标记', FirstRunService.init);
+  await _safeInit('初始化加密服务', EncryptionService.instance.init);
+  // 预加载首页背景图，避免首次渲染时闪烁（失败只是无预加载，不影响启动）
+  await _safeInit(
+    '预加载背景图',
+    () => rootBundle.load('assets/icon/background1.jpg'),
+  );
 
-  await NotificationService().init();
-  await FirstRunService.init();
-  await EncryptionService.instance.init();
-  // 预加载首页背景图，避免首次渲染时闪烁
-  await rootBundle.load('assets/icon/background1.jpg');
   runApp(ProviderScope(child: MyApp()));
+}
+
+/// 执行一步启动初始化，失败时仅记录日志、不中断启动。
+Future<void> _safeInit(String label, Future<void> Function() action) async {
+  try {
+    await action();
+  } catch (e, st) {
+    debugPrint('[main] $label 失败，已跳过: $e\n$st');
+  }
 }
 
 class MyApp extends ConsumerStatefulWidget {

@@ -151,11 +151,18 @@ flutter test --coverage                       # 生成覆盖率报告
 
 ### 构建发布
 
+崩溃监控（Bugsnag）的 API Key 通过**编译期 `--dart-define`** 注入，不再是资源文件，
+因此克隆后无需任何 `.env` 即可直接构建运行（未注入时 Bugsnag 自动跳过）：
+
+```bash
+flutter run  --dart-define=BUGSNAG_API_KEY=你的key
+```
+
 #### Android
 
 ```bash
-flutter build apk --split-per-abi             # 按 ABI 拆分 APK
-flutter build appbundle                       # AAB（Play Store）
+flutter build apk --split-per-abi --dart-define=BUGSNAG_API_KEY=你的key   # 按 ABI 拆分 APK
+flutter build appbundle --dart-define=BUGSNAG_API_KEY=你的key             # AAB（Play Store）
 ```
 
 签名配置在 `android/key.properties`（不提交），由 `android/app/build.gradle.kts` 读取。
@@ -163,9 +170,9 @@ flutter build appbundle                       # AAB（Play Store）
 #### Windows / Linux / Web
 
 ```bash
-flutter build windows
-flutter build linux
-flutter build web --release
+flutter build windows --dart-define=BUGSNAG_API_KEY=你的key
+flutter build linux   --dart-define=BUGSNAG_API_KEY=你的key
+flutter build web --release --dart-define=BUGSNAG_API_KEY=你的key
 ```
 
 ---

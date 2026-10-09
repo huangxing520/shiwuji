@@ -37,7 +37,6 @@ dependencies:
   shared_preferences: ^2.3.3
   bugsnag_flutter: ^4.2.1
   flutter_secure_storage: ^10.3.1
-  flutter_dotenv: ^6.0.1
   html: ^0.15.4
 
 dev_dependencies:
@@ -61,7 +60,6 @@ flutter:
     - assets/icon/
     - assets/fonts/
     - assets/prompts/
-    - .env
   fonts:
     - family: NotoColorEmoji
       fonts:

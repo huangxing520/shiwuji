@@ -1,14 +1,48 @@
 name: Flutter Android 自动构建 & 发布
 
-# 触发规则：推送 v 开头的标签（如 v1.0.0）自动执行 | 支持手动触发
+# 触发规则：
+# - 推送 v 开头的标签（如 v1.0.0）自动构建并发布 Release
+# - 推送到 main / PR：只跑静态检查与测试门禁，不构建发布
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
 
 jobs:
+  # 前置门禁：静态分析 + 单元测试。build-release 依赖本 job，
+  # 任一失败则不会产出 APK，避免「测试退化无人察觉」。
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.2
+          channel: stable
+
+      - name: 获取 Flutter 依赖
+        run: flutter pub get
+
+      # 以 error 级为门禁：当前仓库存在若干历史 warning/info（死代码、过时 API），
+      # 待 P2 清理后再收紧为 --fatal-warnings。
+      # BUGSNAG key 经编译期 --dart-define 注入，测试/分析无需任何 env 文件。
+      - name: 静态分析
+        run: flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos
+
+      - name: 运行测试
+        run: flutter test
+
   build-release:
+    needs: verify
+    # 仅在打 tag 或手动触发时构建发布；main 分支/PR 只跑上面的 verify。
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write          # 允许创建 Release
@@ -36,22 +70,6 @@ jobs:
       - name: 获取 Flutter 依赖
         run: flutter pub get
 
-      # 4.5 创建环境变量文件（.env），安全注入 BUGSNAG_API_KEY
-      - name: 生成环境变量文件
-        env:
-          BUGSNAG_API_KEY: ${{ secrets.BUGSNAG_API_KEY }}
-        run: |
-          if [ -z "$BUGSNAG_API_KEY" ]; then
-            echo "::error::BUGSNAG_API_KEY secret 未设置，请在 GitHub Secrets 中配置该密钥"
-            exit 1
-          fi
-          printf 'BUGSNAG_API_KEY=%s\n' "$BUGSNAG_API_KEY" > .env
-          if [ ! -s .env ]; then
-            echo "::error::.env 文件创建后为空，请检查 BUGSNAG_API_KEY secret"
-            exit 1
-          fi
-          echo "::notice::.env 文件创建成功，BUGSNAG_API_KEY 已注入"
-
       # 5. 配置签名文件（自动从 GitHub 密钥读取，无需手动上传）
       - name: 生成签名文件
         env:
@@ -77,8 +95,12 @@ jobs:
           printf 'keyPassword=%s\n' "$KEY_PASSWORD" >> key.properties
 
       # 6. 构建 Release 版 APK
+      # BUGSNAG_API_KEY 经编译期 --dart-define 注入，不再需要 .env 资源文件；
+      # 未配置 secret 时 key 为空串，Bugsnag 自动跳过，不影响构建。
       - name: 编译生成 APK
-        run: flutter build apk --split-per-abi
+        env:
+          BUGSNAG_API_KEY: ${{ secrets.BUGSNAG_API_KEY }}
+        run: flutter build apk --split-per-abi --dart-define=BUGSNAG_API_KEY="$BUGSNAG_API_KEY"
 
       # 7. 自动发布到 GitHub Release
       - name: 发布 APK
