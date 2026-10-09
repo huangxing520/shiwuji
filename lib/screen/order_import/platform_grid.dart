@@ -41,54 +41,34 @@ class PlatformGrid extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: platform.gradientColors,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.shadowCard,
-                      blurRadius: 20,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: platform.gradientColors,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.shadowCard,
+                  blurRadius: 20,
+                  offset: Offset(0, 4),
                 ),
-                child: Center(
-                  child: Text(
-                    platform.iconText,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                platform.iconText,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
-              // Connection status dot
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color:
-                        platform.connected ? AppColors.success : AppColors.textHint,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.cardBg, width: 2),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 8),
           Text(

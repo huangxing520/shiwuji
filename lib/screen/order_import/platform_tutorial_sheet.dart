@@ -38,7 +38,7 @@ class PlatformTutorialSheet extends StatelessWidget {
                     EmojiText(emoji: platform.emoji, fontSize: 24),
                     const SizedBox(width: 10),
                     Text(
-                      '${platform.name}授权导入',
+                      '${platform.name}导入步骤',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -96,10 +96,10 @@ class PlatformTutorialSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
-                    platform.connected ? '📱 重新授权并导入' : '🔑 授权并开始导入',
-                    style: const TextStyle(
+                    '📖 查看导入步骤',
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,

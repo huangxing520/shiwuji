@@ -56,48 +56,6 @@ final class PlatformsProvider
 
 String _$platformsHash() => r'dd4af6f5c3b7372efe5f0cad363506d4be420d69';
 
-@ProviderFor(mockOrders)
-final mockOrdersProvider = MockOrdersProvider._();
-
-final class MockOrdersProvider
-    extends
-        $FunctionalProvider<List<MockOrder>, List<MockOrder>, List<MockOrder>>
-    with $Provider<List<MockOrder>> {
-  MockOrdersProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'mockOrdersProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$mockOrdersHash();
-
-  @$internal
-  @override
-  $ProviderElement<List<MockOrder>> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  List<MockOrder> create(Ref ref) {
-    return mockOrders(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<MockOrder> value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<List<MockOrder>>(value),
-    );
-  }
-}
-
-String _$mockOrdersHash() => r'cb04becafe1f2161dc42838cfc65f3ff71120069';
-
 @ProviderFor(importHistory)
 final importHistoryProvider = ImportHistoryProvider._();
 

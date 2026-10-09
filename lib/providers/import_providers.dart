@@ -1,11 +1,8 @@
 import 'dart:ui';
 
-import 'package:drift/drift.dart' hide Column;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../database/database.dart' as db;
-import '../daos/import_history_dao.dart';
 import '../models/platform_data.dart';
-import '../models/mock_order.dart';
 import '../models/history_record.dart';
 import 'database_provider.dart';
 
@@ -123,32 +120,6 @@ const _seedPlatforms = <PlatformData>[
 
 @riverpod
 List<PlatformData> platforms(Ref ref) => _seedPlatforms;
-
-// ─── 模拟订单数据（导入模拟用）─────────────────────────
-
-const _seedMockOrders = <MockOrder>[
-  MockOrder(emoji: '🧹', name: '戴森V12吸尘器', price: '3990'),
-  MockOrder(emoji: '🎧', name: 'AirPods Pro 2', price: '1899'),
-  MockOrder(emoji: '💊', name: '兰蔻小黑瓶精华', price: '1080'),
-  MockOrder(emoji: '📦', name: '宜家思库布收纳箱', price: '149'),
-  MockOrder(emoji: '🎵', name: '索尼WH-1000XM5', price: '2499'),
-  MockOrder(emoji: '🍚', name: '美的电饭煲', price: '399'),
-  MockOrder(emoji: '✨', name: 'SK-II神仙水', price: '1590'),
-  MockOrder(emoji: '👔', name: '优衣库轻薄羽绒服', price: '499'),
-  MockOrder(emoji: '📱', name: 'iPhone 15手机壳', price: '89'),
-  MockOrder(emoji: '🍳', name: '不粘煎锅26cm', price: '159'),
-  MockOrder(emoji: '📖', name: '设计中的设计', price: '48'),
-  MockOrder(emoji: '🧱', name: '乐高建筑系列', price: '599'),
-  MockOrder(emoji: '🖥️', name: '戴尔U2723QE显示器', price: '3999'),
-  MockOrder(emoji: '⌨️', name: 'HHKB Professional', price: '2499'),
-  MockOrder(emoji: '🪑', name: '西昊M57人体工学椅', price: '1299'),
-  MockOrder(emoji: '✨', name: '雅诗兰黛小棕瓶', price: '850'),
-  MockOrder(emoji: '👟', name: 'New Balance 990v5', price: '1699'),
-  MockOrder(emoji: '🎒', name: 'Anker通勤背包', price: '399'),
-];
-
-@riverpod
-List<MockOrder> mockOrders(Ref ref) => _seedMockOrders;
 
 // ─── 时间范围配置 ──────────────────────────────────────
 

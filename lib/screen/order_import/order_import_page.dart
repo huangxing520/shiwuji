@@ -1,18 +1,12 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/models/history_record.dart';
-import 'package:shi_wu_ji/models/item.dart';
 import 'package:shi_wu_ji/models/platform_data.dart';
 import 'package:shi_wu_ji/providers/import_providers.dart';
-import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/widgets/toast_utils.dart';
 import 'package:shi_wu_ji/widgets/emoji_text.dart';
 
-import 'import_progress.dart';
 import 'platform_grid.dart';
 import 'platform_tutorial_sheet.dart';
 
@@ -36,33 +30,14 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
   bool _onlyPhysical = true;
   bool _autoMatch = true;
 
-  // Progress state
-  bool _isImporting = false;
-  bool _importDone = false;
-  double _progressValue = 0;
-  int _totalCount = 0;
-  int _successCount = 0;
-  int _failCount = 0;
-  int _pendingCount = 0;
-  List<ImportedItem> _importedItems = [];
-  Timer? _importTimer;
-
   // Hero number animations
   late AnimationController _heroAnimController;
   late Animation<int> _platformCountAnim;
-  late Animation<int> _importedCountAnim;
 
   // Config panel animation
   late AnimationController _configAnimController;
   late Animation<double> _configFadeAnim;
   late Animation<Offset> _configSlideAnim;
-
-  // Progress area animation
-  late AnimationController _progressAnimController;
-  late Animation<double> _progressFadeAnim;
-
-  // Progress bar shimmer animation
-  late AnimationController _shimmerController;
 
   // Button shine animation
   late AnimationController _btnShineController;
@@ -77,9 +52,6 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
       vsync: this,
     );
     _platformCountAnim = IntTween(begin: 0, end: 8).animate(
-      CurvedAnimation(parent: _heroAnimController, curve: Curves.easeOutCubic),
-    );
-    _importedCountAnim = IntTween(begin: 0, end: 1286).animate(
       CurvedAnimation(parent: _heroAnimController, curve: Curves.easeOutCubic),
     );
     _heroAnimController.forward();
@@ -101,22 +73,6 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
           ),
         );
 
-    // Progress area animation
-    _progressAnimController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _progressFadeAnim = CurvedAnimation(
-      parent: _progressAnimController,
-      curve: Curves.easeOut,
-    );
-
-    // Progress bar shimmer
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat();
-
     // Button shine
     _btnShineController = AnimationController(
       duration: const Duration(milliseconds: 2500),
@@ -126,11 +82,8 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
 
   @override
   void dispose() {
-    _importTimer?.cancel();
     _heroAnimController.dispose();
     _configAnimController.dispose();
-    _progressAnimController.dispose();
-    _shimmerController.dispose();
     _btnShineController.dispose();
     super.dispose();
   }
@@ -152,126 +105,58 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
   }
 
   void _confirmPlatform(PlatformData platform) {
-    setState(() {
-      _selectedPlatform = platform;
-      _isImporting = false;
-      _importDone = false;
-      _progressValue = 0;
-      _totalCount = 0;
-      _successCount = 0;
-      _failCount = 0;
-      _pendingCount = 0;
-      _importedItems = [];
-    });
+    setState(() => _selectedPlatform = platform);
     _configAnimController.forward(from: 0);
-    _progressAnimController.reverse();
-    ToastUtils.show(
-      context,
-      '已选择「${platform.name}」，约${platform.orderEstimate}笔订单待导入',
-    );
+    ToastUtils.show(context, '已选择「${platform.name}」');
   }
 
-  // ==================== Start Import ====================
+  // ==================== 导入（尚未实现）====================
+  //
+  // 该功能目前只完成了界面骨架：平台网格与教程文案都是静态展示，
+  // 既没有「上传订单文件」入口，也没有任何真实订单数据源。
+  //
+  // 早期版本这里用 Random() 按 90% 概率伪造「成功/失败」，把 18 条写死的
+  // 演示商品名（戴森吸尘器、AirPods…）当成订单写进真实数据库，并记一条
+  // 假的导入历史。那会让用户在完全不知情的情况下得到几十条与真实订单
+  // 无关的物品记录，因此已移除：在接入真实解析之前，这里不写入任何数据。
   void _startImport() {
     if (_selectedPlatform == null) {
       ToastUtils.show(context, '请先选择购物平台');
       return;
     }
+    _showNotImplementedDialog();
+  }
 
-    final total = _selectedPlatform!.orderEstimate;
-    final mockOrders = ref.read(mockOrdersProvider);
-
-    setState(() {
-      _isImporting = true;
-      _importDone = false;
-      _progressValue = 0;
-      _totalCount = 0;
-      _successCount = 0;
-      _failCount = 0;
-      _pendingCount = total;
-      _importedItems = [];
-    });
-    _progressAnimController.forward(from: 0);
-
-    final rng = Random();
-    int imported = 0;
-    final importedItemModels = <Item>[];
-
-    _importTimer?.cancel();
-    _importTimer = Timer.periodic(const Duration(milliseconds: 350), (timer) {
-      imported++;
-
-      final orderIdx = (imported - 1) % mockOrders.length;
-      final order = mockOrders[orderIdx];
-
-      final isSuccess = rng.nextDouble() < 0.9;
-
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      setState(() {
-        _totalCount = imported;
-        if (isSuccess) {
-          _successCount++;
-          // Create Item from MockOrder for batch database write
-          final item = Item.create(
-            name: order.name,
-            price: double.tryParse(order.price) ?? 0,
-            emoji: order.emoji,
-            category: '未分类',
-            location: '待整理',
-          );
-          importedItemModels.add(item);
-        } else {
-          _failCount++;
-        }
-        _pendingCount = max(0, total - imported);
-        _progressValue = min(imported / total, 1.0);
-        _importedItems.insert(
-          0,
-          ImportedItem(
-            emoji: order.emoji,
-            name: order.name,
-            price: '¥${order.price}',
-            success: isSuccess,
+  void _showNotImplementedDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Text('🚧 ', style: TextStyle(fontSize: 20)),
+            Text(
+              '功能开发中',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: const Text(
+          '订单自动导入还没有接入真实的订单数据源，暂时无法使用。\n\n'
+          '在它完成之前，这里不会写入任何数据，你的物品库不会被改动。\n\n'
+          '现在可以先在「新增物品」里手动记录。',
+          style: TextStyle(height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
           ),
-        );
-      });
-
-      if (imported >= total) {
-        timer.cancel();
-        _importTimer = null;
-
-        // Batch-write imported items to database
-        if (importedItemModels.isNotEmpty) {
-          ref.read(itemsProvider.notifier).addItems(importedItemModels);
-        }
-        // Record this import in history
-        ref
-            .read(importActionsProvider.notifier)
-            .recordImport(
-              platformKey: _selectedPlatform!.key,
-              emoji: _selectedPlatform!.emoji,
-              title: '${_selectedPlatform!.name}订单导入',
-              meta: '${DateTime.now()} · 全部历史订单',
-              count: _successCount,
-              iconBg: AppColors.primary,
-            );
-
-        setState(() {
-          _isImporting = false;
-          _importDone = true;
-          _pendingCount = 0;
-          _progressValue = 1.0;
-        });
-        ToastUtils.show(
-          context,
-          '${_selectedPlatform!.emoji} ${_selectedPlatform!.name}导入完成！成功$_successCount件，失败$_failCount件',
-        );
-      }
-    });
+        ],
+      ),
+    );
   }
 
   // ==================== Build ====================
@@ -311,21 +196,7 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                       ),
                       const SizedBox(height: 20),
                       if (_selectedPlatform != null) _buildConfigPanel(),
-                      if (_isImporting || _importDone)
-                        ImportProgressSection(
-                          importDone: _importDone,
-                          isImporting: _isImporting,
-                          platformName: _selectedPlatform?.name,
-                          progressValue: _progressValue,
-                          totalCount: _totalCount,
-                          successCount: _successCount,
-                          failCount: _failCount,
-                          pendingCount: _pendingCount,
-                          importedItems: _importedItems,
-                          fadeAnimation: _progressFadeAnim,
-                          shimmerController: _shimmerController,
-                        ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 20),
                       _buildSectionTitle(
                         iconBg: AppColors.successLight,
                         iconColor: AppColors.statusUsing,
@@ -474,17 +345,23 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '🛒 一键导入购物订单',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
+                  const Row(
+                    children: [
+                      Text(
+                        '🛒 一键导入购物订单',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      _ComingSoonBadge(),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '支持全主流购物平台，自动解析订单信息',
+                    '订单自动解析功能开发中，暂未接入真实订单数据',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.85),
@@ -496,15 +373,8 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
                     children: [
                       _buildHeroStat(
                         value: '${_platformCountAnim.value}',
-                        label: '支持平台',
+                        label: '计划支持平台',
                       ),
-                      const SizedBox(width: 20),
-                      _buildHeroStat(
-                        value: _formatNumber(_importedCountAnim.value),
-                        label: '累计导入',
-                      ),
-                      const SizedBox(width: 20),
-                      _buildHeroStatStatic(value: '¥52.4w', label: '已管理资产'),
                     ],
                   ),
                 ],
@@ -543,40 +413,6 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
         );
       },
     );
-  }
-
-  Widget _buildHeroStatStatic({required String value, required String label}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.75),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatNumber(int n) {
-    final s = n.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
-    }
-    return buf.toString();
   }
 
   // ==================== Section Title ====================
@@ -804,71 +640,23 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
 
   Widget _buildImportButton() {
     return GestureDetector(
-      onTap: _isImporting ? null : _startImport,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: _isImporting ? 0.5 : 1.0,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.warning],
+      onTap: _startImport,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: AppColors.cardBg,
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: const Center(
+          child: Text(
+            '订单导入开发中',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Button shine effect
-              AnimatedBuilder(
-                animation: _btnShineController,
-                builder: (context, _) {
-                  final pos = _btnShineController.value;
-                  if (pos < 0.4) {
-                    return Positioned(
-                      left: -100 + pos * 600,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 80,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0),
-                              Colors.white.withValues(alpha: 0.25),
-                              Colors.white.withValues(alpha: 0),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              Center(
-                child: Text(
-                  _isImporting
-                      ? '导入中…'
-                      : _importDone
-                      ? '再次导入'
-                      : '开始导入',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -999,6 +787,30 @@ class _OrderImportPageState extends ConsumerState<OrderImportPage>
           }).toList(),
         );
       },
+    );
+  }
+}
+
+/// 「开发中」角标：用于明确标注尚未实现的功能，避免界面暗示功能已可用。
+class _ComingSoonBadge extends StatelessWidget {
+  const _ComingSoonBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        '开发中',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }
