@@ -82,7 +82,7 @@ final class RoomActionsProvider
   RoomActions create() => RoomActions();
 }
 
-String _$roomActionsHash() => r'b243b6bd20578e67181ad9d4a33253d5a4ceb89d';
+String _$roomActionsHash() => r'519a882537465ca8fcf81df8811d301f4819a2b6';
 
 /// 新增房间
 /// 使用 keepAlive 是因为：调用方（收纳页）只用 ref.read(...notifier) 触发操作、不监听，
@@ -217,7 +217,7 @@ final class CabinetActionsProvider
   CabinetActions create() => CabinetActions();
 }
 
-String _$cabinetActionsHash() => r'483ea18563f4aae94915209c3cedc862470feaa9';
+String _$cabinetActionsHash() => r'9a8a9736f35dd665b8736b6a43bb01e699f96535';
 
 /// 新增柜子
 /// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，
@@ -350,7 +350,7 @@ final class SlotActionsProvider
   SlotActions create() => SlotActions();
 }
 
-String _$slotActionsHash() => r'8b303d55db6c8b7c32fbb6c8da2dfde73d397de6';
+String _$slotActionsHash() => r'8b3b9b4596ecfa049bc32c3d82c433d2b9dfbe64';
 
 /// 新增格位
 /// 使用 keepAlive 是因为：调用方只用 ref.read(...notifier) 触发操作、不监听，

@@ -5,6 +5,7 @@ import '../daos/category_dao.dart';
 import '../models/category.dart';
 import '../models/category_item.dart';
 import 'database_provider.dart';
+import 'item_providers.dart';
 
 part 'generated/category_provider.g.dart';
 
@@ -82,6 +83,9 @@ class CategoryManager extends _$CategoryManager {
     await _dao.unassignItems(existing.label);
     await _dao.deleteCategory(id);
     ref.invalidateSelf();
+    // 分类归属是冗余在 items 上的，必须连带失效物品源，
+    // 否则物品库/首页仍显示已删分类的标签。
+    ref.invalidate(itemsProvider);
   }
 
   /// 重排自定义分类

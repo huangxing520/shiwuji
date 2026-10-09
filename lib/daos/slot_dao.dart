@@ -25,8 +25,15 @@ class SlotDao extends DatabaseAccessor<AppDatabase> with _$SlotDaoMixin {
     return rows > 0;
   }
 
-  Future<int> deleteSlot(String id) =>
-      (delete(slots)..where((t) => t.id.equals(id))).go();
+  /// 级联删除格子及其下格位物品与直接归属该格子的物品。
+  /// 用显式事务而非外键 CASCADE，理由同 [RoomDao.deleteRoom]。
+  Future<void> deleteSlot(String id) {
+    return transaction(() async {
+      await customStatement('DELETE FROM space_items WHERE slot_id = ?', [id]);
+      await customStatement('DELETE FROM items WHERE slot_id = ?', [id]);
+      await customStatement('DELETE FROM slots WHERE id = ?', [id]);
+    });
+  }
 
   /// 统计某个格位下的物品数量（主物品 items + space_items）
   Future<int> itemCount(String slotId) async {

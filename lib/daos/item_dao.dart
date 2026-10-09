@@ -40,6 +40,45 @@ class ItemDao extends DatabaseAccessor<AppDatabase> with _$ItemDaoMixin {
     );
   }
 
+  /// 依据房间 / 柜体 / 格子的当前名称，重写物品中冗余存储的 location 路径标签。
+  ///
+  /// 物品的 location 是「房间 / 柜体 / 格子」的冗余副本，空间节点改名后若不回写，
+  /// 详情页、物品库、首页仍会显示旧位置。三选一传入 [roomId]/[cabinetId]/[slotId]
+  /// 限定范围；都不传则全量重写。未挂到柜体的物品保持原值不动。
+  Future<int> relabelLocations({
+    String? roomId,
+    String? cabinetId,
+    String? slotId,
+  }) {
+    final where = StringBuffer('items.cabinet_id IS NOT NULL');
+    final variables = <Variable>[];
+    if (roomId != null) {
+      where.write(
+        ' AND items.cabinet_id IN '
+        '(SELECT id FROM cabinets WHERE room_id = ?)',
+      );
+      variables.add(Variable.withString(roomId));
+    } else if (cabinetId != null) {
+      where.write(' AND items.cabinet_id = ?');
+      variables.add(Variable.withString(cabinetId));
+    } else if (slotId != null) {
+      where.write(' AND items.slot_id = ?');
+      variables.add(Variable.withString(slotId));
+    }
+    return customUpdate(
+      "UPDATE items SET location = COALESCE(("
+      "SELECT r.name || ' / ' || c.name || "
+      "CASE WHEN items.slot_id IS NOT NULL AND s.name IS NOT NULL "
+      "THEN ' / ' || s.name ELSE '' END "
+      "FROM cabinets c JOIN rooms r ON r.id = c.room_id "
+      "LEFT JOIN slots s ON s.id = items.slot_id "
+      "WHERE c.id = items.cabinet_id"
+      "), items.location) WHERE $where",
+      variables: variables,
+      updates: {items},
+    );
+  }
+
   Future<int> countAll() async {
     final result = await customSelect(
       'SELECT COUNT(*) AS total FROM items',

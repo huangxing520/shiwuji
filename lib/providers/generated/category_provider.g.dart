@@ -85,7 +85,7 @@ final class CategoryManagerProvider
   CategoryManager create() => CategoryManager();
 }
 
-String _$categoryManagerHash() => r'f4430b8b5d51ae5f3a7ffcf1039b3dce18fb8b38';
+String _$categoryManagerHash() => r'5c01ac290073963a1a4f34d88a4a2aa192d54e66';
 
 abstract class _$CategoryManager extends $AsyncNotifier<List<CategoryItem>> {
   FutureOr<List<CategoryItem>> build();

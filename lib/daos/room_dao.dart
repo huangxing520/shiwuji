@@ -22,8 +22,36 @@ class RoomDao extends DatabaseAccessor<AppDatabase> with _$RoomDaoMixin {
     return rows > 0;
   }
 
-  Future<int> deleteRoom(String id) =>
-      (delete(rooms)..where((t) => t.id.equals(id))).go();
+  /// 级联删除房间及其下所有柜体、格子、格位物品与直接归属该房间的物品。
+  ///
+  /// 用显式事务删除，而不是依赖外键 `ON DELETE CASCADE`：历史版本的
+  /// cabinets/slots 表 DDL 里并没有 CASCADE 子句，而 SQLite 无法用
+  /// `ALTER TABLE` 给已有表补外键（只能重建整张表），因此外键方案对
+  /// 已发布的老库完全无效。显式删除对老库、新库行为一致。
+  ///
+  /// 删除顺序按依赖从深到浅：space_items → items → slots → cabinets → rooms。
+  Future<void> deleteRoom(String id) {
+    return transaction(() async {
+      await customStatement(
+        'DELETE FROM space_items WHERE slot_id IN ('
+        'SELECT s.id FROM slots s JOIN cabinets c ON s.cabinet_id = c.id '
+        'WHERE c.room_id = ?)',
+        [id],
+      );
+      await customStatement(
+        'DELETE FROM items WHERE cabinet_id IN '
+        '(SELECT id FROM cabinets WHERE room_id = ?)',
+        [id],
+      );
+      await customStatement(
+        'DELETE FROM slots WHERE cabinet_id IN '
+        '(SELECT id FROM cabinets WHERE room_id = ?)',
+        [id],
+      );
+      await customStatement('DELETE FROM cabinets WHERE room_id = ?', [id]);
+      await customStatement('DELETE FROM rooms WHERE id = ?', [id]);
+    });
+  }
 
   /// 统计某个房间下的柜子数量
   Future<int> cabinetCount(String roomId) async {

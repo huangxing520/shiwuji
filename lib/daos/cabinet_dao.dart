@@ -29,8 +29,20 @@ class CabinetDao extends DatabaseAccessor<AppDatabase>
     return rows > 0;
   }
 
-  Future<int> deleteCabinet(String id) =>
-      (delete(cabinets)..where((t) => t.id.equals(id))).go();
+  /// 级联删除柜体及其下所有格子、格位物品与直接归属该柜体的物品。
+  /// 用显式事务而非外键 CASCADE，理由同 [RoomDao.deleteRoom]。
+  Future<void> deleteCabinet(String id) {
+    return transaction(() async {
+      await customStatement(
+        'DELETE FROM space_items WHERE slot_id IN '
+        '(SELECT id FROM slots WHERE cabinet_id = ?)',
+        [id],
+      );
+      await customStatement('DELETE FROM items WHERE cabinet_id = ?', [id]);
+      await customStatement('DELETE FROM slots WHERE cabinet_id = ?', [id]);
+      await customStatement('DELETE FROM cabinets WHERE id = ?', [id]);
+    });
+  }
 
   /// 统计某个柜子下的格位数量
   Future<int> slotCount(String cabinetId) async {

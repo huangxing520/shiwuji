@@ -78,6 +78,10 @@ class RoomActions extends _$RoomActions {
     await dao.updateRoom(
       db.RoomsCompanion(id: Value(id), name: Value(name), emoji: Value(emoji)),
     );
+    // 房间改名后回写物品冗余的 location 路径标签，并失效物品源，
+    // 否则物品库/详情页/首页仍显示旧房间名。
+    await ref.read(itemDaoProvider).relabelLocations(roomId: id);
+    ref.invalidate(itemsProvider);
     ref.invalidate(roomsProvider);
   }
 
@@ -204,6 +208,9 @@ class CabinetActions extends _$CabinetActions {
         emoji: Value(emoji),
       ),
     );
+    // 柜体改名后回写其下物品的 location 路径标签
+    await ref.read(itemDaoProvider).relabelLocations(cabinetId: id);
+    ref.invalidate(itemsProvider);
     ref.invalidate(cabinetsByRoomProvider(roomId));
     ref.invalidate(roomsProvider);
   }
@@ -318,6 +325,9 @@ class SlotActions extends _$SlotActions {
             : const Value.absent(),
       ),
     );
+    // 格子改名后回写其下物品的 location 路径标签
+    await ref.read(itemDaoProvider).relabelLocations(slotId: id);
+    ref.invalidate(itemsProvider);
     ref.invalidate(slotsByCabinetProvider(cabinetId));
     ref.invalidate(roomsProvider);
   }
