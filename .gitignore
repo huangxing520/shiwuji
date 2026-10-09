@@ -53,3 +53,6 @@ app.*.map.json
 .env
 .env.local
 .env.*.local
+
+# ZCode 工具缓存（内含本机绝对路径）
+.v2c/
