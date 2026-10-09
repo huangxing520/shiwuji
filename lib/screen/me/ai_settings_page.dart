@@ -102,6 +102,8 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
   }
 
   Future<void> _refreshSavedConfigs() async {
+    // 可能被 _save 在 await 之后调用，此时页面可能已销毁。
+    if (!mounted) return;
     setState(() => _loadingSaved = true);
     try {
       final configs = await ref
@@ -1202,6 +1204,8 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
     required int elapsedMs,
     String? error,
   }) {
+    // 所有调用点都在 await 之后，此处必须自判 mounted，避免在已销毁的 State 上 setState。
+    if (!mounted) return;
     setState(() {
       _testLogs.insert(
         0,

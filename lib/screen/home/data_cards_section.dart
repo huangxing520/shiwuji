@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
+import 'package:shi_wu_ji/models/item.dart';
 import 'package:shi_wu_ji/widgets/data_card.dart';
 
 class DataCardsSection extends StatelessWidget {
@@ -63,7 +64,7 @@ class DataCardsSection extends StatelessWidget {
             target: pendingCount,
             unit: '件',
             label: '即将到期',
-            trendLabel: '3天内到期',
+            trendLabel: '${Item.kWarrantyExpiringSoonDays}天内到期',
             trendUp: false,
             color: AppColors.danger,
             decoColor: AppColors.shimmerRed,

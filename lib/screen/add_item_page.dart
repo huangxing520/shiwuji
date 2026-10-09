@@ -69,6 +69,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
   final List<PhotoEntry> _photos = [];
   bool _isPicking = false;
 
+  // 保存中标志：防止双击「保存入库」写入重复记录
+  bool _isSaving = false;
+
   // 状态
   String _selectedTemplate = 'none';
   String _selectedSource = '线下购买';
@@ -146,6 +149,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
     // 编辑模式：从数据库预填充；扫一扫：用识别结果预填充；其余新增模式：空白表单
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_isEdit) {
         _prefillFromItem();
       } else if (widget.initialValues != null) {
@@ -353,15 +357,20 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     setState(() => _isPicking = true);
 
     final remaining = PhotoService.maxPhotos - _photos.length;
-    final result = await PhotoService.instance.pickFromGallery(
-      remaining: remaining,
-    );
+    PickResult result;
+    try {
+      result = await PhotoService.instance.pickFromGallery(
+        remaining: remaining,
+      );
+    } finally {
+      // 无论成功、失败还是异常，都必须解除按钮禁用，否则本页永久卡死。
+      if (mounted) setState(() => _isPicking = false);
+    }
 
     if (!mounted) return;
-    setState(() {
-      _photos.addAll(result.entries);
-      _isPicking = false;
-    });
+    if (result.entries.isNotEmpty) {
+      setState(() => _photos.addAll(result.entries));
+    }
 
     if (result.error != null && result.entries.isEmpty) {
       _showToast(result.error!);
@@ -380,13 +389,18 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
     }
     setState(() => _isPicking = true);
 
-    final result = await PhotoService.instance.pickFromCamera();
+    PickResult result;
+    try {
+      result = await PhotoService.instance.pickFromCamera();
+    } finally {
+      // 无论成功、失败还是异常，都必须解除按钮禁用，否则本页永久卡死。
+      if (mounted) setState(() => _isPicking = false);
+    }
 
     if (!mounted) return;
-    setState(() {
-      _photos.addAll(result.entries);
-      _isPicking = false;
-    });
+    if (result.entries.isNotEmpty) {
+      setState(() => _photos.addAll(result.entries));
+    }
 
     if (result.error != null) {
       _showToast(result.error!);
@@ -651,6 +665,20 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
   // ==================== 保存 ====================
   Future<void> _saveItem(bool andContinue) async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await _doSaveItem(andContinue);
+    } catch (e, st) {
+      debugPrint('[AddItemPage] 保存失败: $e\n$st');
+      if (mounted) _showToast('保存失败，请重试');
+    } finally {
+      // 无论成功/失败/异常都解除禁用，避免保存中按钮永久卡死。
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _doSaveItem(bool andContinue) async {
     final name = _nameController.text.trim();
     final priceStr = _priceController.text.trim();
 
@@ -690,13 +718,18 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
 
     // 计算保修天数：以日期设置为准（与提醒开关解耦），
     // 未选择日期 → 0（未设置）；选择日期 → 到期日 - 购买日。
-    // 结束日早于购买日时回退默认 1 年，避免负值。
+    // 到期日早于购买日是无效输入，直接拦截而不是悄悄改成 365 天，
+    // 否则入库数据会凭空生成一个用户从未选择的到期日。
     int warrantyDays = 0;
     if (_warrantyDateController.text.isNotEmpty) {
       try {
         final warrantyEnd = DateTime.parse(_warrantyDateController.text);
         warrantyDays = warrantyEnd.difference(purchaseDate).inDays;
-        if (warrantyDays < 0) warrantyDays = 365;
+        if (warrantyDays < 0) {
+          _showToast('保修到期日不能早于购买日期');
+          FocusScope.of(context).unfocus();
+          return;
+        }
       } catch (_) {}
     }
 
@@ -1778,7 +1811,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
           // 保存入库 / 保存修改
           Expanded(
             child: GestureDetector(
-              onTap: () => _saveItem(false),
+              onTap: _isSaving ? null : () => _saveItem(false),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 decoration: BoxDecoration(
@@ -1795,14 +1828,25 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
                   ],
                 ),
                 child: Center(
-                  child: Text(
-                    _isEdit ? '保存修改' : '保存入库',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          _isEdit ? '保存修改' : '保存入库',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -1812,7 +1856,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage>
             const SizedBox(width: 10),
             Expanded(
               child: GestureDetector(
-                onTap: () => _saveItem(true),
+                onTap: _isSaving ? null : () => _saveItem(true),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(

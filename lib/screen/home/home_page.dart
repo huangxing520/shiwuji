@@ -24,7 +24,6 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  bool _isRefreshing = false;
   static const _bgAsset = 'assets/icon/background1.jpg';
 
   @override
@@ -36,11 +35,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _onRefresh() async {
-    setState(() => _isRefreshing = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isRefreshing = false);
-      ToastUtils.show(context, '数据已刷新 \u{1F389}');
+    // RefreshIndicator 依据本 Future 的完成时机收起转圈，无需自维护刷新标志。
+    try {
+      // 真正重新拉取数据：失效并等待物品源，派生统计与「最近新增」随之重建。
+      ref.invalidate(itemsProvider);
+      await ref.read(itemsProvider.future);
+      if (mounted) ToastUtils.show(context, '数据已刷新 \u{1F389}');
+    } catch (e) {
+      if (mounted) ToastUtils.show(context, '刷新失败，请重试');
     }
   }
 

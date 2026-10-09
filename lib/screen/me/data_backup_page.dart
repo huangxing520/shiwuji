@@ -61,6 +61,7 @@ class _DataBackupPageState extends ConsumerState<DataBackupPage> {
     final pass = await dao.getValue('webdav_password') ?? '';
     final dir = await dao.getValue('webdav_dir') ?? '';
 
+    if (!mounted) return;
     setState(() {
       _urlController.text = url;
       _userController.text = user;

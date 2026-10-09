@@ -330,13 +330,22 @@ class ItemDetailPage extends ConsumerWidget {
     await NotificationService().cancelWarrantyReminder(item.id);
     await NotificationService().cancelShelfLifeReminder(item.id);
 
-    // 清理物品照片文件
-    for (final photo in item.photos) {
-      PhotoService.instance.deleteFile(photo);
+    // 先删数据库行：删除失败则整体中止，不产生「记录还在但照片已被删」的不可恢复状态。
+    try {
+      await ref.read(itemsProvider.notifier).removeItem(item.id);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('删除失败，请重试')),
+        );
+      }
+      return;
     }
 
-    // 从数据库删除
-    await ref.read(itemsProvider.notifier).removeItem(item.id);
+    // 数据库删除成功后再清理照片文件（失败也不影响已完成的删除）
+    for (final photo in item.photos) {
+      await PhotoService.instance.deleteFile(photo);
+    }
 
     if (context.mounted) {
       context.pop();
@@ -772,6 +781,7 @@ class ItemDetailPage extends ConsumerWidget {
                       locationLabel: node.pathLabel,
                     );
                 if (ctx.mounted) Navigator.pop(ctx);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('已更新收纳位置：${node.pathLabel}'),

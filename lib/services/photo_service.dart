@@ -42,7 +42,18 @@ class PhotoService {
   /// 从相册多选照片，返回拷贝后的本地路径条目。
   /// [remaining] 为当前还能添加几张（上限 - 已有数）。
   /// 注意：当 remaining=1 时使用 pickImage（单选），因为 pickMultiImage 要求 limit>=2。
+  ///
+  /// 内部已捕获所有异常并转为 [PickResult.error]，调用方无需 try/catch。
   Future<PickResult> pickFromGallery({required int remaining}) async {
+    try {
+      return await _pickFromGallery(remaining: remaining);
+    } catch (e, st) {
+      debugPrint('[PhotoService] pickFromGallery 异常: $e\n$st');
+      return const PickResult(error: '选择照片失败，请检查权限后重试');
+    }
+  }
+
+  Future<PickResult> _pickFromGallery({required int remaining}) async {
     if (remaining <= 0) {
       return const PickResult(error: '最多添加 $maxPhotos 张照片');
     }
@@ -106,7 +117,18 @@ class PhotoService {
   }
 
   /// 调用相机拍摄单张照片。
+  ///
+  /// 内部已捕获所有异常并转为 [PickResult.error]，调用方无需 try/catch。
   Future<PickResult> pickFromCamera() async {
+    try {
+      return await _pickFromCamera();
+    } catch (e, st) {
+      debugPrint('[PhotoService] pickFromCamera 异常: $e\n$st');
+      return const PickResult(error: '拍照失败，请检查相机权限后重试');
+    }
+  }
+
+  Future<PickResult> _pickFromCamera() async {
     final x = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,

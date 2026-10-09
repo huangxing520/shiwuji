@@ -34,39 +34,50 @@ class NotificationService {
   // ─── 初始化 ───────────────────────────────
 
   /// 应用启动时调用，初始化通知插件和时区数据。
+  ///
+  /// 任何失败都只降级为「不支持通知」，绝不向上抛异常中断启动；
+  /// 只有真正初始化成功才置位 [_initialized]，失败时允许后续重试。
   Future<void> init() async {
     if (_initialized) return;
-    _initialized = true;
 
     // 支持 Android、Windows、Linux 等非 Web 平台
     _platformSupported = !kIsWeb;
     if (!_platformSupported) {
       debugPrint('[NotificationService] 当前平台不支持本地通知，已跳过初始化');
+      _initialized = true;
       return;
     }
 
-    tz.initializeTimeZones();
+    try {
+      tz.initializeTimeZones();
 
-    const androidSettings = AndroidInitializationSettings(
-      '@drawable/ic_notification',
-    );
-    const initSettings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(
-      settings: initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
+      const androidSettings = AndroidInitializationSettings(
+        '@drawable/ic_notification',
+      );
+      const initSettings = InitializationSettings(android: androidSettings);
+      await _plugin.initialize(
+        settings: initSettings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
 
-    // Android 13+ (API 33) 需要运行时请求通知权限
-    if (!kIsWeb && Platform.isAndroid) {
-      final androidPlugin = _plugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
-      await androidPlugin?.requestNotificationsPermission();
-      await androidPlugin?.requestExactAlarmsPermission();
+      // Android 13+ (API 33) 需要运行时请求通知权限
+      if (Platform.isAndroid) {
+        final androidPlugin = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        await androidPlugin?.requestNotificationsPermission();
+        await androidPlugin?.requestExactAlarmsPermission();
+      }
+
+      _initialized = true;
+      debugPrint('[NotificationService] 初始化完成');
+    } catch (e, st) {
+      // 例如 flutter_local_notifications 在无实现的目标上抛 MissingPluginException。
+      // 降级为不支持，调用方据此跳过所有调度，避免启动即崩溃。
+      _platformSupported = false;
+      debugPrint('[NotificationService] 初始化失败，已降级为不支持通知: $e\n$st');
     }
-
-    debugPrint('[NotificationService] 初始化完成');
   }
 
   void _onNotificationTapped(NotificationResponse response) {

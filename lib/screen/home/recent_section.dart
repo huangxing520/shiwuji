@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/constants/app_colors.dart';
 import 'package:shi_wu_ji/models/enums/item_tag_type.dart';
+import 'package:shi_wu_ji/models/item.dart';
 import 'package:shi_wu_ji/providers/item_providers.dart';
 import 'package:shi_wu_ji/widgets/list_item_card.dart';
 
@@ -68,8 +69,9 @@ class RecentSection extends ConsumerWidget {
   /// 1. 已过保 → expired
   /// 2. 即将到期（7天内） → urgent
   /// 3. 近30天内购买 → newItem
-  /// 4. 其他 → normal（在保）
-  ItemTagType _resolveTag(dynamic item) {
+  /// 4. 其余：有保修 → normal（在保）；未设保修 → expired（与物品库「过保」口径一致，
+  ///    避免同一物品在首页显示「在保」、在物品库显示「过保」）。
+  ItemTagType _resolveTag(Item item) {
     if (item.isWarrantyExpired) return ItemTagType.expired;
     if (item.isWarrantyExpiringSoon) return ItemTagType.urgent;
 
@@ -78,6 +80,6 @@ class RecentSection extends ConsumerWidget {
         .inDays;
     if (daysSincePurchase <= 30) return ItemTagType.newItem;
 
-    return ItemTagType.normal;
+    return item.hasWarranty ? ItemTagType.normal : ItemTagType.expired;
   }
 }

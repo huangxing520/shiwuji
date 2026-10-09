@@ -183,7 +183,9 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
     final allItemsAsync = ref.watch(itemsProvider);
     return allItemsAsync.maybeWhen(
       data: (allItems) {
-        var filtered = allItems;
+        // 先拷贝一份：后续 sort 是原地操作，直接改 itemsProvider 缓存的 List
+        // 会污染共享状态且不触发通知，导致其他页面读到的顺序被悄悄改变。
+        var filtered = [...allItems];
         if (_activeCategory != 'all') {
           filtered = filtered
               .where((i) => i.categoryKey == _activeCategory)
@@ -283,11 +285,16 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
             filtered.sort((a, b) => a.price.compareTo(b.price));
             break;
           case SortType.expiring:
-            filtered.sort(
-              (a, b) => a.daysUntilWarrantyExpiry.compareTo(
+            // 未设置保修的物品没有有意义的到期日（warrantyEndDate == purchaseDate
+            // 会算出巨大负数），统一沉底，避免它们占据最前面。
+            filtered.sort((a, b) {
+              if (a.hasWarranty != b.hasWarranty) {
+                return a.hasWarranty ? -1 : 1;
+              }
+              return a.daysUntilWarrantyExpiry.compareTo(
                 b.daysUntilWarrantyExpiry,
-              ),
-            );
+              );
+            });
             break;
         }
         return filtered;

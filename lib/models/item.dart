@@ -9,6 +9,10 @@ part 'generated/item.g.dart';
 abstract class Item with _$Item {
   const Item._();
 
+  /// 「即将到期」的判定阈值（天）。UI 文案与 [isWarrantyExpiringSoon] 共用同一来源，
+  /// 避免出现「文案写 3 天、实现判 7 天」这类口径漂移。
+  static const int kWarrantyExpiringSoonDays = 7;
+
   const factory Item({
     required String id,
     required String name,
@@ -104,7 +108,9 @@ abstract class Item with _$Item {
   bool get isWarrantyExpired => hasWarranty && daysUntilWarrantyExpiry < 0;
 
   bool get isWarrantyExpiringSoon =>
-      hasWarranty && !isWarrantyExpired && daysUntilWarrantyExpiry <= 7;
+      hasWarranty &&
+      !isWarrantyExpired &&
+      daysUntilWarrantyExpiry <= kWarrantyExpiringSoonDays;
 
   bool get isUnderWarranty => hasWarranty && !isWarrantyExpired;
 

@@ -26,6 +26,27 @@ class _ScanPageState extends ConsumerState<ScanPage> {
   String? _errorMessage;
   AiProviderConfig? _selectedConfig;
 
+  /// 识别用图已被「添加到物品库」接管：此后不再由本页清理文件。
+  bool _handedOff = false;
+
+  @override
+  void dispose() {
+    // 未被「添加到物品库」接管的草稿图在离开页面时清理，避免文档目录无限增长。
+    if (!_handedOff && _capturedImagePath != null) {
+      PhotoService.instance.deleteFile(_capturedImagePath!);
+    }
+    super.dispose();
+  }
+
+  /// 丢弃当前草稿图（重拍/重置时调用）：已交给 add_item 的文件不动。
+  void _discardCaptured() {
+    if (_handedOff) return;
+    final path = _capturedImagePath;
+    if (path != null) {
+      PhotoService.instance.deleteFile(path);
+    }
+  }
+
   Future<void> _onTakePhoto() async {
     if (_isAnalyzing) return;
     try {
@@ -38,7 +59,10 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       }
       if (result.entries.isEmpty) return;
 
+      // 重拍前清理上一张未被接管的草稿图
+      _discardCaptured();
       setState(() {
+        _handedOff = false;
         _capturedImagePath = result.entries.first.path;
         _isAnalyzing = true;
         _errorMessage = null;
@@ -71,7 +95,10 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       }
 
       debugPrint('[ScanPage] 选图成功: ${result.entries.first.path}');
+      // 换图前清理上一张未被接管的草稿图
+      _discardCaptured();
       setState(() {
+        _handedOff = false;
         _capturedImagePath = result.entries.first.path;
         _isAnalyzing = true;
         _errorMessage = null;
@@ -130,13 +157,14 @@ class _ScanPageState extends ConsumerState<ScanPage> {
 
       final provider = AiProviderRegistry.instance.get(activeConfig.type);
       final prompt = await PromptService.instance.loadRecognitionPrompt();
+      // 请求前先取 notifier 引用：await 期间页面可能已被销毁，此时再 ref.read 会抛错。
+      final logs = ref.read(aiCallLogsProvider.notifier);
       final result = await provider.recognizeImage(
         imagePath: _capturedImagePath!,
         config: activeConfig.toCallConfig(),
         prompt: prompt,
       );
 
-      final logs = ref.read(aiCallLogsProvider.notifier);
       logs.record(
         AiCallLog(
           provider: activeConfig.type,
@@ -154,6 +182,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       final logs = ref.read(aiCallLogsProvider.notifier);
       AiProviderType providerType = AiProviderType.gemini;
       if (_selectedConfig != null) {
@@ -190,6 +219,8 @@ class _ScanPageState extends ConsumerState<ScanPage> {
   }
 
   void _reset() {
+    // 重置即丢弃当前草稿图（已交给 add_item 的除外）
+    _discardCaptured();
     setState(() {
       _isAnalyzing = false;
       _capturedImagePath = null;
@@ -204,6 +235,8 @@ class _ScanPageState extends ConsumerState<ScanPage> {
     final result = _result!;
     // 不直接入库，而是携带识别结果跳转到新建物品页，由用户确认/补充后保存
     if (mounted) {
+      // 文件所有权移交给新建物品页：本页 dispose 不再清理它
+      _handedOff = true;
       context.push(
         '/add_item',
         extra: AddItemInitialValues(

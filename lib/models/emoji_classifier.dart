@@ -8,6 +8,27 @@
 /// 4. 数据驱动、纯声明式，新增二级分类只需往 [_registry] 追加条目，无需改动匹配逻辑。
 library;
 
+/// 纯 ASCII 关键词（如 phone / earphone）编译出的词边界正则缓存。
+/// 中文没有词边界概念，仍走 contains 子串匹配。
+final Map<String, RegExp> _asciiKeywordPatterns = {};
+
+/// 判断关键词是否只由 ASCII 单词字符组成（字母、数字、下划线）。
+bool _isAsciiWord(String kw) => RegExp(r'^[a-z0-9_]+$').hasMatch(kw);
+
+/// 匹配单个关键词。
+///
+/// ASCII 关键词要求整词命中，避免 `phone` 命中 `earphone`/`iphone`
+/// 这类子串导致的误判（见 D7：耳机 emoji 曾因此永不可达）。
+bool _keywordMatches(String lowerContent, String keyword) {
+  final kw = keyword.toLowerCase();
+  if (!_isAsciiWord(kw)) return lowerContent.contains(kw);
+  final pattern = _asciiKeywordPatterns.putIfAbsent(
+    kw,
+    () => RegExp('(?<![a-z0-9_])${RegExp.escape(kw)}(?![a-z0-9_])'),
+  );
+  return pattern.hasMatch(lowerContent);
+}
+
 /// 二级分类定义。
 ///
 /// [keywords] 命中任意一个即视为匹配；[priority] 越大越优先
@@ -27,7 +48,7 @@ class EmojiSubCategory {
 
   bool matches(String lowerContent) {
     for (final kw in keywords) {
-      if (lowerContent.contains(kw.toLowerCase())) return true;
+      if (_keywordMatches(lowerContent, kw)) return true;
     }
     return false;
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shi_wu_ji/screen/home_page.dart';
 import 'package:shi_wu_ji/screen/inventory_page.dart';
@@ -19,6 +20,8 @@ import 'package:shi_wu_ji/screen/scan/scan_page.dart';
 GoRouter createAppRouter({String initialLocation = '/'}) {
   return GoRouter(
     initialLocation: initialLocation,
+    // 未匹配的路径或坏深链不抛错，渲染可读兜底页（含返回首页入口）。
+    errorBuilder: (context, state) => _RouteErrorPage(message: state.error?.toString()),
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(
@@ -28,8 +31,11 @@ GoRouter createAppRouter({String initialLocation = '/'}) {
       ),
       GoRoute(
         path: '/edit_item/:id',
-        builder: (context, state) =>
-            AddItemPage(itemId: state.pathParameters['id']),
+        builder: (context, state) {
+          final id = state.pathParameters['id'];
+          if (id == null || id.isEmpty) return const _RouteErrorPage(message: '缺少物品标识');
+          return AddItemPage(itemId: id);
+        },
       ),
       GoRoute(
         path: '/order-import',
@@ -58,8 +64,11 @@ GoRouter createAppRouter({String initialLocation = '/'}) {
       GoRoute(path: '/scan', builder: (context, state) => const ScanPage()),
       GoRoute(
         path: '/detail/:id',
-        builder: (context, state) =>
-            ItemDetailPage(itemId: state.pathParameters['id']!),
+        builder: (context, state) {
+          final id = state.pathParameters['id'];
+          if (id == null || id.isEmpty) return const _RouteErrorPage(message: '缺少物品标识');
+          return ItemDetailPage(itemId: id);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -102,4 +111,46 @@ GoRouter createAppRouter({String initialLocation = '/'}) {
       ),
     ],
   );
+}
+
+/// 路由兜底页：路径未匹配、深链缺参数时展示可读错误，而不是崩溃或白屏。
+class _RouteErrorPage extends StatelessWidget {
+  final String? message;
+
+  const _RouteErrorPage({this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                '页面不存在或无法打开',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              if (message != null && message!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => context.go('/home'),
+                child: const Text('返回首页'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
