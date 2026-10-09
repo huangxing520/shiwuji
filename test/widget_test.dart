@@ -29,9 +29,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
 
-    // 标题区域
-    expect(find.text('早上好，小橘 🌞'), findsOneWidget);
-    // 搜索栏
-    expect(find.textContaining('搜索'), findsOneWidget);
+    // 标题区域：问候语按当前小时分支（凌晨/早上/中午/傍晚/晚上），
+    // 只断言昵称，避免测试只在本地 05:00–11:00 通过。
+    expect(find.textContaining('小橘'), findsOneWidget);
+    // 头部下方紧邻的数据卡片区块（首屏可见，ListView 懒加载不会跳过）。
+    expect(find.text('物品总数'), findsOneWidget);
   });
 }

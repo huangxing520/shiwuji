@@ -136,12 +136,16 @@ void main() {
       expect(item.isWarrantyExpired, false);
     });
 
+    // 注意：daysUntilWarrantyExpiry 用 inDays，是向零截断的，
+    // 而该方法内部会重新取一次 DateTime.now()。若把到期日卡在「正好 8 天」，
+    // 两次取样之间流逝的微秒会把 8 天截断成 7 天，判成 expiring → 测试随机失败。
+    // 因此这里留 1 天余量（到期日距now 9 天 → 截断后 8 天），确保稳定 > 阈值。
     test('isWarrantyExpiringSoon: 8 days left (false)', () {
       final item = Item(
         id: '1',
         name: 'Test',
         price: 100,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 357)),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 356)),
         warrantyDays: 365,
       );
       expect(item.isWarrantyExpiringSoon, false);
