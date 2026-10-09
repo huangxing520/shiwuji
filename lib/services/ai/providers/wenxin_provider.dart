@@ -241,8 +241,9 @@ class WenxinProvider extends AiProvider {
                 ? config.baseUrl!.trim()
                 : defaultBaseUrl)
             .replaceAll(RegExp(r'/+$'), '');
-    final tokenEndpoint =
-        '$base/oauth/2.0/token?grant_type=client_credentials&client_id=${config.apiKey}&client_secret=${config.secretKey}';
+    // 仅供日志展示：不含 client_secret。真实请求由 _fetchAccessToken 以
+    // queryParameters 形式发出，密钥不会出现在 URL 文本或日志里。
+    final tokenEndpoint = '$base/oauth/2.0/token';
 
     AiDebugLog.request(
       provider: type.name,

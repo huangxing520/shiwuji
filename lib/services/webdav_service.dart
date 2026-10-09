@@ -34,9 +34,23 @@ class BackupFileInfo {
 ///
 /// 备份内容以 ZIP 格式打包，内含 data.json（结构化数据）。
 /// 恢复时兼容新版 .zip 与旧版 .json 两种格式。
+///
+/// 注意：备份会过滤掉所有凭据类设置项（见 [_sensitiveSettingPrefixes]），
+/// 因此换机恢复后需要重新填写 WebDAV 密码与 AI API Key。
 class WebDavService {
   Client? _client;
   String _backupDir = '/shiwuji_backups';
+
+  /// 不进入备份的设置项前缀：备份会上传到用户自己的云端目标，
+  /// 凭据与密钥不应随备份复制出去长期驻留。
+  static const List<String> _sensitiveSettingPrefixes = [
+    'webdav_', // WebDAV 地址 / 账号 / 密码
+    'ai_', // AI 服务商 API Key / Secret Key / 模型配置
+    'bugsnag', // 崩溃上报 key
+  ];
+
+  static bool _isSensitiveSetting(String key) =>
+      _sensitiveSettingPrefixes.any(key.startsWith);
 
   static const _filenamePrefix = 'shiwuji_backup_';
 
@@ -115,6 +129,7 @@ class WebDavService {
       'categories': categories.map((e) => e.toJson()).toList(),
       'importHistory': importHistory.map((e) => e.toJson()).toList(),
       'settings': settings
+          .where((e) => !_isSensitiveSetting(e.key))
           .map((e) => {'key': e.key, 'value': e.value})
           .toList(),
     };
@@ -460,12 +475,12 @@ class WebDavService {
         }
       }
 
-      // ─── 恢复 settings（排除 webdav_ 配置）────
+      // ─── 恢复 settings（跳过凭据类键，含旧备份里的 webdav_/ai_ 数据）────
       if (data['settings'] != null) {
         for (final s
             in (data['settings'] as List).cast<Map<String, dynamic>>()) {
           final key = _reqStr(s, 'key', 'settings');
-          if (!key.startsWith('webdav_')) {
+          if (!_isSensitiveSetting(key)) {
             await db
                 .into(db.settings)
                 .insertOnConflictUpdate(

@@ -280,6 +280,15 @@ class AiDebugLog {
     return '${key.substring(0, 4)}****${key.substring(key.length - 4)}';
   }
 
+  /// 去掉 URL 的 query 部分再落日志。
+  ///
+  /// 部分服务商（如文心）把 client_secret 放在 query 里，
+  /// 直接打印 endpoint 会把密钥写进调试日志。
+  static String sanitizeUrl(String url) {
+    final qi = url.indexOf('?');
+    return qi == -1 ? url : '${url.substring(0, qi)}?…';
+  }
+
   static void _log(String msg) {
     if (enabled) debugPrint('$_tag $msg');
   }
@@ -296,7 +305,7 @@ class AiDebugLog {
   }) {
     final buf = StringBuffer()
       ..writeln('→ 请求 [$provider] model=$model')
-      ..writeln('  endpoint: $endpoint')
+      ..writeln('  endpoint: ${sanitizeUrl(endpoint)}')
       ..writeln('  apiKey: ${maskKey(apiKey)}');
     if (imageSizeBytes != null) {
       buf.writeln(

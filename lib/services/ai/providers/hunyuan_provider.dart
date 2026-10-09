@@ -34,8 +34,11 @@ class HunyuanProvider extends AiProvider {
     required AiCallConfig config,
     String? prompt,
   }) async {
+    // secretKey 为 null 时必须同样判为未配置：`null?.trim().isEmpty == true`
+    // 会得到 false，从而绕过校验并让后面的 `secretKey!` 崩溃。
     if (config.apiKey.trim().isEmpty ||
-        config.secretKey?.trim().isEmpty == true) {
+        config.secretKey == null ||
+        config.secretKey!.trim().isEmpty) {
       throw AiException('未配置腾讯云 SecretId / SecretKey', providerId: type.name);
     }
 
@@ -252,8 +255,10 @@ class HunyuanProvider extends AiProvider {
 
   @override
   Future<void> testConnection(AiCallConfig config) async {
+    // 同 recognizeImage：secretKey 为 null 也必须判为未配置。
     if (config.apiKey.trim().isEmpty ||
-        config.secretKey?.trim().isEmpty == true) {
+        config.secretKey == null ||
+        config.secretKey!.trim().isEmpty) {
       throw AiException('未配置腾讯云 SecretId / SecretKey', providerId: type.name);
     }
 

@@ -267,6 +267,13 @@ class AiConfigManager extends _$AiConfigManager {
       await _saveConfig(dao, config);
       newIds.add(id);
 
+      // 迁移成功后清除旧版明文键：否则明文 API Key / Secret Key 会永久留在
+      // settings 表，并随备份一并上传（见 A4/B2）。
+      await dao.setValue('$legacyApiKeyPrefix${type.name}', '');
+      await dao.setValue('$legacySecretKeyPrefix${type.name}', '');
+      await dao.setValue('$legacyModelPrefix${type.name}', '');
+      await dao.setValue('$legacyBaseUrlPrefix${type.name}', '');
+
       if (type == legacyActiveType) {
         activeId = id;
       }
@@ -277,6 +284,7 @@ class AiConfigManager extends _$AiConfigManager {
       if (activeId != null) {
         await dao.setValue(_activeModelIdKey, _encryptValue(activeId));
       }
+      await dao.setValue(legacyTypeKey, '');
     }
   }
 
